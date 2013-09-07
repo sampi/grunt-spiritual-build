@@ -1,0 +1,16 @@
+{
+	"esnext": true,
+	"globals": {
+		"module" : true,
+		"require" : true,
+		"console" : true
+	},
+	"globalstrict": false,
+	"quotmark": false,
+	"smarttabs": true,
+	"trailing": true,
+	"undef": true,
+	"unused": "vars",
+	"trailing": true,
+	"sub": true
+}
