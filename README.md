@@ -1,4 +1,4 @@
-grunt-spiritual
+Grunt Spiritual
 ===============
 
-Build Spiritual from source.
+Grunt task to build Spiritual from source files.
