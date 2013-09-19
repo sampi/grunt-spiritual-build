@@ -25,6 +25,7 @@
 		"Map": true,
 		"Set": true,
 		"WeakMap": true,
-		"alert": true
+		"alert": true,
+		"self": true
 	}
 }
