@@ -1,5 +1,6 @@
 var path = require ( "path" );
 var ugli = require ( "uglify-js" );
+var hint = require ( "jshint" ).JSHINT;
 
 /**
  * Here it comes.
@@ -9,7 +10,6 @@ module.exports = function ( grunt ) {
 
 	"use strict";
 
-	var STRICT = /(^|\n)[ \t]*('use strict'|"use strict");?\s*/g;
 	var SPACER = "\n\n\n";
 	var HEADER = '( function ( window ) {\n\n"use strict";';
 	var FOOTER = '}( this ));';
@@ -28,9 +28,63 @@ module.exports = function ( grunt ) {
 	 */
 	function process ( files, options ) {
 		Object.keys ( files ).forEach ( function ( target ) {
-			concat ( target, files [ target ], options );
-			compress ( target, options );
+			if ( validate ( files [ target ])) {
+				concat ( target, files [ target ], options );
+				compress ( target, options );
+			}
 		});
+	}
+
+	/**
+	 * @returns {boolean}
+	 */
+	function validate ( shortlist ) {
+		var filemap = mapcontents ( shortlist );
+		var configs = __dirname + "/jshint.json";
+		var options = grunt.file.readJSON ( configs );
+		var globals = options.globals;
+		delete options.globals;
+		return allvalid ( filemap, options, globals );
+	}
+
+	/**
+	 * @returns {boolean}
+	 */
+	function allvalid ( files, options, globals ) {
+		return Object.keys ( files ).every ( function ( filepath ) {
+			var content = files [ filepath ];
+			if ( hint ( content, options, globals )) {
+				return true;
+			} else {
+				report ( filepath, hint.errors [ 0 ]);
+				return false;
+			}
+		});
+	}
+
+	/**
+	 *
+	 */
+	function mapcontents ( shortlist ) {
+		var longlist = expand ( shortlist );
+		var sources = contents ( longlist );
+		var map = {};
+		sources.forEach ( function ( src, i ) {
+			map [ longlist [ i ]] = src;
+		});
+		return map;
+	}
+
+	/**
+	 *
+	 */
+	function report ( filepath, error ) {
+		console.log ( 
+			filepath + ": \n" + 
+			"line " + error.line + ", " + 
+			"char " + error.character  + ": " + 
+			error.reason 
+		);
 	}
 
 	/**
@@ -62,11 +116,19 @@ module.exports = function ( grunt ) {
 	 */
 	function collect ( longlist ) {
 		return enclose (
-			longlist.filter (
-				existence
-			).map (
-				content
-			).join ( SPACER )
+			contents ( longlist ).join ( SPACER )
+		);
+	}
+
+	/**
+	 * @param {Array<String>} longlist
+	 * @returns {Array<String>}
+	 */
+	function contents ( longlist ) {
+		return longlist.filter (
+			existence
+		).map (
+			content
 		);
 	}
 
@@ -84,13 +146,11 @@ module.exports = function ( grunt ) {
 	}
 
 	/**
-	 * Wrap concatenated scripts in humongous closure. Replace 
-	 * nested "use strict" statements with single one in the top. 
+	 * Wrap script in humongous closure.
 	 * @param {String} filepath
 	 * @returns {String}
 	 */
 	function enclose ( source ) {
-		source = source.replace ( STRICT, "" );
 		return HEADER + SPACER + source + SPACER + FOOTER;
 	}
 
@@ -149,21 +209,21 @@ module.exports = function ( grunt ) {
 	/**
 	 * If source is a JSON file, resolve the file 
 	 * as a new source list relative to that file.
-	 * @param {Array<String>} filepaths
+	 * @param {Array<String>} sources
 	 * @returns {Array<String>}
 	 */
-	function explode ( filepaths ) {
+	function explode ( sources ) {
 		var json, res = [];
-		filepaths.filter ( existence ).forEach ( function ( filepath ) {
-			switch ( path.extname ( filepath )) {
+		sources.forEach ( function ( source ) {
+			switch ( path.extname ( source )) {
 				case ".json" :
-					json = grunt.file.readJSON ( filepath );
-					res.push.apply ( res, json.map ( function ( localpath ) {
-						return path.dirname ( filepath ) + "/" + localpath;
+					json = grunt.file.readJSON ( source );
+					res.push.apply ( res, json.map ( function ( filepath ) {
+						return path.dirname ( source ) + "/" + filepath;
 					}));
 					break;
 				case ".js" :
-					res.push ( filepath );
+					res.push ( source );
 					break;
 			}
 		});
