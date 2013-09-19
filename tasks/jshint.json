@@ -18,6 +18,7 @@
 	"regexdash": true,
 	"globals": {
 		"gui": true,
+		"edb": true,
 		"console": true,
 		"setImmediate": true,
 		"requestAnimationFrame": true,
