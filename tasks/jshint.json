@@ -1,0 +1,29 @@
+{
+	"curly": true,
+	"eqeqeq": true,
+	"immed": true,
+	"latedef": true,
+	"newcap": true,
+	"noarg": true,
+	"sub": true,
+	"undef": true,
+	"boss": true,
+	"eqnull": true,
+	"browser": true,
+	"smarttabs":true,
+	"onecase": true,
+	"scripturl": true,
+	"laxbreak": true,
+	"supernew": true,
+	"regexdash": true,
+	"globals": {
+		"gui": true,
+		"console": true,
+		"setImmediate": true,
+		"requestAnimationFrame": true,
+		"Map": true,
+		"Set": true,
+		"WeakMap": true,
+		"alert": true
+	}
+}
