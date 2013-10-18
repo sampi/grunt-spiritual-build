@@ -26,6 +26,8 @@
 		"Set": true,
 		"WeakMap": true,
 		"alert": true,
-		"self": true
+		"self": true,
+		"ActiveXObject": true,
+		"XDomainRequest": true
 	}
 }
