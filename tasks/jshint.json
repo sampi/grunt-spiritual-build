@@ -28,6 +28,7 @@
 		"alert": true,
 		"self": true,
 		"ActiveXObject": true,
-		"XDomainRequest": true
+		"XDomainRequest": true,
+		"Proxy" : true
 	}
 }
