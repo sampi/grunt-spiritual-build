@@ -20,6 +20,7 @@
 		"gui": true,
 		"edb": true,
 		"console": true,
+		"chrome": true,
 		"setImmediate": true,
 		"requestAnimationFrame": true,
 		"Map": true,
