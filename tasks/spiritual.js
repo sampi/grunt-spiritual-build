@@ -11,8 +11,8 @@ module.exports = function ( grunt ) {
 	"use strict";
 
 	var SPACER = "\n\n\n";
-	var HEADER = '( function ( window ) {\n\n"use strict";';
-	var FOOTER = '}( this ));';
+	var HEADER = '(function(window) {\n\n"use strict";';
+	var FOOTER = '}(self));'; // worker compatible context
 
 	/*
 	 * Task to concat and minify files.
