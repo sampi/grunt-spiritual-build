@@ -1,9 +1,10 @@
 {
   "name": "grunt-spiritual-build",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "dependencies": {
     "uglify-js": "~2.4.0",
-    "jshint": "~2.1.10"
+    "jshint": "~2.1.10",
+    "chalk": "^0.5.1"
   },
   "repository": {
     "type": "git",
@@ -17,8 +18,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Wired Earp <wiredearp@gmail.com>",
-  "license": "MIT",
-  "dependencies": {
-    "chalk": "^0.5.1"
-  }
+  "license": "MIT"
 }
