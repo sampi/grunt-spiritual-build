@@ -1,8 +1,22 @@
 {
   "name": "grunt-spiritual-build",
-  "version": "0.1.0",
+  "version": "0.1.5",
   "dependencies": {
     "uglify-js": "~2.4.0",
-    "jshint": "~2.1.10"
-  }
+    "jshint": "~2.1.10",
+    "chalk": "^0.5.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/wunderbyte/grunt-spiritual-build.git"
+  },
+  "bugs": {
+    "url": "https://github.com/wunderbyte/grunt-spiritual-build/issues"
+  },
+  "homepage": "https://github.com/wunderbyte/grunt-spiritual-build",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Wired Earp <wiredearp@gmail.com>",
+  "license": "MIT"
 }

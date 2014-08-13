@@ -1,6 +1,7 @@
 var path = require ( "path" );
 var ugli = require ( "uglify-js" );
 var hint = require ( "jshint" ).JSHINT;
+var chalk = require('chalk');
 
 /**
  * Here it comes.
@@ -11,14 +12,20 @@ module.exports = function ( grunt ) {
 	"use strict";
 
 	var SPACER = "\n\n\n";
-	var HEADER = '( function ( window ) {\n\n"use strict";';
-	var FOOTER = '}( this ));';
+	var HEADER = '(function(window) {\n\n"use strict";';
+	var FOOTER = '}(self));'; // worker compatible context
 
 	/*
 	 * Task to concat and minify files.
 	 */
 	grunt.registerMultiTask ( "spiritual", "Build Spiritual", function () {
-		process ( this.data.files, this.options ());
+		var options = this.options();
+		options.base = grunt.template.process(options.base || ".");
+		if(grunt.file.exists(filename('package.json', options))) {
+			process ( this.data.files, options);
+		} else {
+			grunt.log.error('Not a project root: "' + options.base + '"');
+		}
 	});
 
 	/** 
@@ -27,11 +34,15 @@ module.exports = function ( grunt ) {
 	 * @param {Map<String,String} options
 	 */
 	function process ( files, options ) {
-		Object.keys ( files ).forEach ( function ( target ) {
-			if ( validate ( files [ target ])) {
-				concat ( target, files [ target ], options );
+		Object.keys ( files ).forEach ( function ( t ) {
+			var target = grunt.template.process(t);
+			var sources = files [ t ].map(function(s) {
+				return path.normalize(options.base + '/' + grunt.template.process(s));
+			});
+			if ( validate ( sources )) {
+				concat ( target, sources, options );
 				compress ( target, options );
-			}
+			}			
 		});
 	}
 
@@ -182,9 +193,30 @@ module.exports = function ( grunt ) {
 	 * @param {String} filetext
 	 */
 	function writefile ( filepath, filetext, options ) {
-		filetext = ( options.banner || "" ) + filetext;
-		grunt.file.write ( filepath, filetext );
-		grunt.log.writeln ( "File \"" + filepath + "\" created." );
+		var version = '-1.0.0';
+		var packag = filename('package.json', options);
+		var banner = filename('BANNER.txt', options);
+		if(grunt.file.exists(banner)) {
+			filetext = grunt.file.read(banner) + '\n' + filetext;	
+		}
+		if(grunt.file.exists(packag)) {
+			var json = grunt.file.readJSON(packag);
+			version = json.version;
+		}
+		grunt.file.write ( filepath, grunt.template.process(filetext, {
+			data: { version: version }
+		}));
+		grunt.log.writeln ( "File \"" + chalk.cyan(filepath) + "\" created." );
+	}
+
+	/**
+	 * Get weirdo filename relative to base.
+	 * @param {string} name
+	 * @param {Map} options
+	 * @returns {string}
+	 */
+	function filename(name, options) {
+		return path.normalize(options.base + '/' + name);
 	}
 
 	/**
