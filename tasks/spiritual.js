@@ -19,7 +19,13 @@ module.exports = function ( grunt ) {
 	 * Task to concat and minify files.
 	 */
 	grunt.registerMultiTask ( "spiritual", "Build Spiritual", function () {
-		process ( this.data.files, this.options ());
+		var options = this.options();
+		options.base = grunt.template.process(options.base || ".");
+		if(grunt.file.exists(filename('package.json', options))) {
+			process ( this.data.files, options);
+		} else {
+			grunt.log.error('Not a project root: "' + options.base + '"');
+		}
 	});
 
 	/** 
@@ -30,9 +36,8 @@ module.exports = function ( grunt ) {
 	function process ( files, options ) {
 		Object.keys ( files ).forEach ( function ( t ) {
 			var target = grunt.template.process(t);
-			console.log('target', target);
 			var sources = files [ t ].map(function(s) {
-				return grunt.template.process(s);
+				return path.normalize(options.base + '/' + grunt.template.process(s));
 			});
 			if ( validate ( sources )) {
 				concat ( target, sources, options );
@@ -188,9 +193,30 @@ module.exports = function ( grunt ) {
 	 * @param {String} filetext
 	 */
 	function writefile ( filepath, filetext, options ) {
-		filetext = ( options.banner || "" ) + filetext;
-		grunt.file.write ( filepath, filetext );
+		var version = '-1.0.0';
+		var packag = filename('package.json', options);
+		var banner = filename('BANNER.txt', options);
+		if(grunt.file.exists(banner)) {
+			filetext = grunt.file.read(banner) + '\n' + filetext;	
+		}
+		if(grunt.file.exists(packag)) {
+			var json = grunt.file.readJSON(packag);
+			version = json.version;
+		}
+		grunt.file.write ( filepath, grunt.template.process(filetext, {
+			data: { version: version }
+		}));
 		grunt.log.writeln ( "File \"" + chalk.cyan(filepath) + "\" created." );
+	}
+
+	/**
+	 * Get weirdo filename relative to base.
+	 * @param {string} name
+	 * @param {Map} options
+	 * @returns {string}
+	 */
+	function filename(name, options) {
+		return path.normalize(options.base + '/' + name);
 	}
 
 	/**
