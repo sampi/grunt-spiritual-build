@@ -19,6 +19,7 @@
 	"globals": {
 		"gui": true,
 		"edb": true,
+		"edbml": true,
 		"console": true,
 		"chrome": true,
 		"setImmediate": true,
