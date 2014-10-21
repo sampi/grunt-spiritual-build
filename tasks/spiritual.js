@@ -1,13 +1,15 @@
-var path = require ( "path" );
-var ugli = require ( "uglify-js" );
-var hint = require ( "jshint" ).JSHINT;
+var path = require("path");
+var ugli = require("uglify-js");
+var hint = require("jshint").JSHINT;
 var chalk = require('chalk');
+//var esprima = require('esprima');
+var sixto5 = require('6to5');
 
 /**
  * Here it comes.
  * @param {Grunt} grunt
  */
-module.exports = function ( grunt ) {
+module.exports = function(grunt) {
 
 	"use strict";
 
@@ -18,11 +20,11 @@ module.exports = function ( grunt ) {
 	/*
 	 * Task to concat and minify files.
 	 */
-	grunt.registerMultiTask ( "spiritual", "Build Spiritual", function () {
+	grunt.registerMultiTask("spiritual", "Build Spiritual", function() {
 		var options = this.options();
 		options.base = grunt.template.process(options.base || ".");
-		if(grunt.file.exists(filename('package.json', options))) {
-			process ( this.data.files, options);
+		if (grunt.file.exists(filename('package.json', options))) {
+			process(this.data.files, options);
 		} else {
 			grunt.log.error('Not a project root: "' + options.base + '"');
 		}
@@ -33,41 +35,41 @@ module.exports = function ( grunt ) {
 	 * @param {Map<String,String} files
 	 * @param {Map<String,String} options
 	 */
-	function process ( files, options ) {
-		Object.keys ( files ).forEach ( function ( t ) {
+	function process(files, options) {
+		Object.keys(files).forEach(function(t) {
 			var target = grunt.template.process(t);
-			var sources = files [ t ].map(function(s) {
+			var sources = files[t].map(function(s) {
 				return path.normalize(options.base + '/' + grunt.template.process(s));
 			});
-			if ( validate ( sources )) {
-				concat ( target, sources, options );
-				compress ( target, options );
-			}			
+			if (validate(sources)) {
+				concat(target, sources, options);
+				compress(target, options);
+			}
 		});
 	}
 
 	/**
 	 * @returns {boolean}
 	 */
-	function validate ( shortlist ) {
-		var filemap = mapcontents ( shortlist );
+	function validate(shortlist) {
+		var filemap = mapcontents(shortlist);
 		var configs = __dirname + "/jshint.json";
-		var options = grunt.file.readJSON ( configs );
+		var options = grunt.file.readJSON(configs);
 		var globals = options.globals;
 		delete options.globals;
-		return allvalid ( filemap, options, globals );
+		return allvalid(filemap, options, globals);
 	}
 
 	/**
 	 * @returns {boolean}
 	 */
-	function allvalid ( files, options, globals ) {
-		return Object.keys ( files ).every ( function ( filepath ) {
-			var content = files [ filepath ];
-			if ( hint ( content, options, globals )) {
+	function allvalid(files, options, globals) {
+		return Object.keys(files).every(function(filepath) {
+			var content = files[filepath];
+			if (hint(content, options, globals)) {
 				return true;
 			} else {
-				report ( filepath, hint.errors [ 0 ]);
+				report(filepath, hint.errors[0]);
 				return false;
 			}
 		});
@@ -76,12 +78,12 @@ module.exports = function ( grunt ) {
 	/**
 	 *
 	 */
-	function mapcontents ( shortlist ) {
-		var longlist = expand ( shortlist );
-		var sources = contents ( longlist );
+	function mapcontents(shortlist) {
+		var longlist = expand(shortlist);
+		var sources = contents(longlist);
 		var map = {};
-		sources.forEach ( function ( src, i ) {
-			map [ longlist [ i ]] = src;
+		sources.forEach(function(src, i) {
+			map[longlist[i]] = src;
 		});
 		return map;
 	}
@@ -89,12 +91,12 @@ module.exports = function ( grunt ) {
 	/**
 	 *
 	 */
-	function report ( filepath, error ) {
-		console.log ( 
-			filepath + ": \n" + 
-			"line " + error.line + ", " + 
-			"char " + error.character  + ": " + 
-			error.reason 
+	function report(filepath, error) {
+		console.log(
+			filepath + ": \n" +
+			"line " + error.line + ", " +
+			"char " + error.character + ": " +
+			error.reason
 		);
 	}
 
@@ -104,20 +106,28 @@ module.exports = function ( grunt ) {
 	 * @param {Array<String>} shortlist
 	 * @param {Map<String,String} options
 	 */
-	function concat ( target, shortlist, options ) {
-		var longlist = expand ( shortlist );
-		var longtext = collect ( longlist );
-    writefile ( target, longtext, options );
+	function concat(target, shortlist, options) {
+		var longlist = expand(shortlist);
+		var longtext = collect(longlist);
+		writefile(target, longtext, options);
 	}
+
+	/*
+	function experimental(target, longtext, options) {
+		var json = esprima.parse(longtext);
+		var text = JSON.stringify(json, null, '\t'	);
+		writefile(target + '.json', text, options);
+	}
+	*/
 
 	/**
 	 * Compress concatenated files.
 	 * @param {String} filepath
 	 * @param {Map<String,String} options
 	 */
-	function compress ( filepath, options ) {
-		var target = filepath.replace ( ".js", ".min.js" );
-		writefile ( target, uglify ( filepath ), options );
+	function compress(filepath, options) {
+		var target = filepath.replace(".js", ".min.js");
+		writefile(target, uglify(filepath), options);
 	}
 
 	/**
@@ -125,9 +135,9 @@ module.exports = function ( grunt ) {
 	 * @param {Array<String>} longlist
 	 * @returns {String}
 	 */
-	function collect ( longlist ) {
-		return enclose (
-			contents ( longlist ).join ( SPACER )
+	function collect(longlist) {
+		return enclose(
+			contents(longlist).join(SPACER)
 		);
 	}
 
@@ -135,12 +145,42 @@ module.exports = function ( grunt ) {
 	 * @param {Array<String>} longlist
 	 * @returns {Array<String>}
 	 */
-	function contents ( longlist ) {
-		return longlist.filter (
+	function contents(longlist) {
+		var es6 = false;
+		return longlist.filter(
 			existence
-		).map (
+		).map(
 			content
+		).map(
+			superkeyword
+		).map(
+			es6 ? transpile : itself
 		);
+	}
+
+	/**
+	 * TODO: potentially implement a minimal 
+	 * overhead version of the this._super...
+	 */
+	function superkeyword(js) {
+		return js;
+	}
+
+	/**
+	 * Return the input, since we don't need it.
+	 */
+	function itself(input) {
+		return input;
+	}
+
+	/**
+	 * TODO: This at some point.
+	 * @param {string} js
+	 * @returns {string}
+	 */
+	function transpile(js) {
+		js = sixto5.transform(js).code;
+		return js.replace(/"use strict";\n/, '');
 	}
 
 	/**
@@ -148,12 +188,12 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath The file path
 	 * @returns {String}
 	 */
-	function uglify ( filepath ) {
-		return ugli.minify ( filepath, {
+	function uglify(filepath) {
+		return ugli.minify(filepath, {
 			compress: {
-        warnings: false
-      }
-    }).code;
+				warnings: false
+			}
+		}).code;
 	}
 
 	/**
@@ -161,7 +201,7 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath
 	 * @returns {String}
 	 */
-	function enclose ( source ) {
+	function enclose(source) {
 		return HEADER + SPACER + source + SPACER + FOOTER;
 	}
 
@@ -170,10 +210,10 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath
 	 * @returns {boolean}
 	 */
-	function existence ( filepath ) {
-		var does = grunt.file.exists ( filepath );
-		if ( !does ) {
-			grunt.log.warn ( filepath + "not found." );
+	function existence(filepath) {
+		var does = grunt.file.exists(filepath);
+		if (!does) {
+			grunt.log.warn('Human error: ' + chalk.cyan(filepath) + ' not found.');
 		}
 		return does;
 	}
@@ -183,8 +223,8 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath
 	 * @returns {String}
 	 */
-	function content ( filepath ) {
-		return grunt.file.read ( filepath );
+	function content(filepath) {
+		return grunt.file.read(filepath);
 	}
 
 	/**
@@ -192,21 +232,23 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath
 	 * @param {String} filetext
 	 */
-	function writefile ( filepath, filetext, options ) {
+	function writefile(filepath, filetext, options) {
 		var version = '-1.0.0';
 		var packag = filename('package.json', options);
 		var banner = filename('BANNER.txt', options);
-		if(grunt.file.exists(banner)) {
-			filetext = grunt.file.read(banner) + '\n' + filetext;	
+		if (grunt.file.exists(banner)) {
+			filetext = grunt.file.read(banner) + '\n' + filetext;
 		}
-		if(grunt.file.exists(packag)) {
+		if (grunt.file.exists(packag)) {
 			var json = grunt.file.readJSON(packag);
 			version = json.version;
 		}
-		grunt.file.write ( filepath, grunt.template.process(filetext, {
-			data: { version: version }
+		grunt.file.write(filepath, grunt.template.process(filetext, {
+			data: {
+				version: version
+			}
 		}));
-		grunt.log.writeln ( "File \"" + chalk.cyan(filepath) + "\" created." );
+		grunt.log.writeln("File \"" + chalk.cyan(filepath) + "\" created.");
 	}
 
 	/**
@@ -224,9 +266,9 @@ module.exports = function ( grunt ) {
 	 * @param {Array<String>} sources
 	 * @returns {Array<String>}
 	 */
-	function expand ( sources ) {
-		sources = grunt.file.expand ( sources );
-		return explode ( sources.map ( relpath ));
+	function expand(sources) {
+		sources = grunt.file.expand(sources);
+		return explode(sources.map(relpath));
 	}
 
 	/**
@@ -234,28 +276,28 @@ module.exports = function ( grunt ) {
 	 * @param {String} filepath
 	 * @returns {String}
 	 */
-	function relpath ( filepath ) {
-		return path.relative ( path.dirname ( "." ), filepath );
+	function relpath(filepath) {
+		return path.relative(path.dirname("."), filepath);
 	}
 
 	/**
-	 * If source is a JSON file, resolve the file 
+	 * If source is a JSON file, resolve the file
 	 * as a new source list relative to that file.
 	 * @param {Array<String>} sources
 	 * @returns {Array<String>}
 	 */
-	function explode ( sources ) {
+	function explode(sources) {
 		var json, res = [];
-		sources.forEach ( function ( source ) {
-			switch ( path.extname ( source )) {
-				case ".json" :
-					json = grunt.file.readJSON ( source );
-					res.push.apply ( res, json.map ( function ( filepath ) {
-						return path.dirname ( source ) + "/" + filepath;
+		sources.forEach(function(source) {
+			switch (path.extname(source)) {
+				case ".json":
+					json = grunt.file.readJSON(source);
+					res.push.apply(res, json.map(function(filepath) {
+						return path.dirname(source) + "/" + filepath;
 					}));
 					break;
-				case ".js" :
-					res.push ( source );
+				case ".js":
+					res.push(source);
 					break;
 			}
 		});
