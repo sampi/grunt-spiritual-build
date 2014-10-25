@@ -1,6 +1,6 @@
 {
 	"name": "grunt-spiritual-build",
-	"version": "0.1.11",
+	"version": "0.1.12",
 	"dependencies": {
 		"uglify-js": "^2.4.15",
 		"jshint": "^2.1.11",

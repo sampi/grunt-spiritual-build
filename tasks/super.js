@@ -1,47 +1,60 @@
 /**
- *
+ * @param {string} js
+ * @param {string} keyword
  */
 exports.pseudokeyword = function(js, keyword) {
 	return run(js, '', (keyword || 'this._super') + '.', js.length - 1);
 };
 
+
+// Private .....................................................................
+
 /**
- *
+ * @param {string} input
+ * @param {string} output
+ * @param {string} keyword
+ * @param {number} endindex
  */
-function run(input, out, keyword, stop) {
+function run(input, output, keyword, endindex) {
 
 	var METHODNAME = /\w|\$/;
 	var CLASSNAME = /\w|\$|\./;
 
-	var character = '',
+	var 
+		character = '',
 		prototype = null,
 		charindex = 0,
-		curlycount = 0,
+		curlcount = 0,
+		stringmode = false,
 		supercall = false,
 		methodname = false,
 		superargs = false,
-		buffer = '';
+		buffer = '',
+		wordindex = -1,
+		subwords = [
+			'.extend', 
+			'.mixin'
+		];
 
 	/**
-	 *
+	 * Check if we hit a `MyClass.extend` or `MyClass.mixin` pattern.
 	 */
-	function checkextension() {
-		var extend = '.extend';
-		if(findbehind(extend)) {
-			prototype = getprototypeof(extend);
-			console.log(prototype);
-			curlycount = -1;
-		}
+	function checkextensions() {
+		subwords.every(checkextension);
 	}
 
 	/**
-	 * TODO: zero-index singularity?
+	 * @param {string} subword
 	 */
-	function getprototypeof(extend) {
-		var prev = buffer.substr(0, startindex(extend));
-		var indx = prev.length;
-		while(--indx && prev[indx].match(CLASSNAME)) {}
-		return prev.substring(indx + 1) + '.prototype.';
+	function checkextension(subword) {
+		var checknext = true;
+		if(findbehind(subword) && endshere(subword)) {
+			wordindex = startindex(subword);
+			prototype = getprototypeat(wordindex);
+			curlcount = -1;
+			checknext = false;
+		}
+		return checknext;
 	}
 
 	/**
@@ -57,6 +70,17 @@ function run(input, out, keyword, stop) {
 	}
 
 	/**
+	 * TODO: zero-index singularity?
+	 * @
+	 */
+	function getprototypeat(index) {
+		var prev = buffer.substr(0, index);
+		var indx = prev.length;
+		while(--indx && prev[indx].match(CLASSNAME)) {}
+		return prev.substring(indx + 1) + '.prototype.';
+	}
+
+	/**
 	 *
 	 */
 	function findbehind(string) {
@@ -69,6 +93,12 @@ function run(input, out, keyword, stop) {
 			}
 		}
 		return false;
+	}
+
+	function endshere(subword) {
+		var nextindex = charindex + 1;
+		return input.length === nextindex ||
+			!input[nextindex].match(METHODNAME);
 	}
 
 	/**
@@ -116,8 +146,8 @@ function run(input, out, keyword, stop) {
 	 *
 	 */
 	function flush() {
-		out += buffer;
-		out += character;
+		output += buffer;
+		output += character;
 		buffer = '';
 		supercall = false;
 		methodname = false;
@@ -125,17 +155,32 @@ function run(input, out, keyword, stop) {
 	}
 
 	function somechars() {
-		if(prototype) {
+		if(!stringmode) {
 			switch (character) {
 				case '{':
-					curlycount --;
+					curlcount --;
 					break;
 				case '}':
-					curlycount --;
-					if(curlycount === 0) {
+					curlcount --;
+					if(curlcount === 0) {
 						prototype = null;
 					}
 					break;
+			}
+		}
+		if(!stringmode) {
+			if(prototype) {
+				switch (character) {
+					case '{':
+						curlcount --;
+						break;
+					case '}':
+						curlcount --;
+						if(curlcount === 0) {
+							prototype = null;
+						}
+						break;
+				}
 			}
 		}
 	}
@@ -161,21 +206,20 @@ function run(input, out, keyword, stop) {
 					checksupercall();
 				}
 				if(!prototype) {
-					checkextension();
+					checkextensions();
 				}
 				break;
 		}
 	}
 
 	// iterate all characters
-	while (charindex <= stop) {
+	while (charindex <= endindex) {
 		character = input[charindex];
 		somechars();
 		morechars();
 		charindex++;
 	}
 
-	// flush and return
-	out += buffer;
-	return out;
+	// flush and cover
+	return output + buffer;
 }
