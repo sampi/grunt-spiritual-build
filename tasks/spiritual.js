@@ -2,7 +2,7 @@ var path = require("path");
 var ugli = require("uglify-js");
 var hint = require("jshint").JSHINT;
 var chalk = require('chalk');
-//var esprima = require('esprima');
+var suber = require('./super');
 var sixto5 = require('6to5');
 
 /**
@@ -112,14 +112,6 @@ module.exports = function(grunt) {
 		writefile(target, longtext, options);
 	}
 
-	/*
-	function experimental(target, longtext, options) {
-		var json = esprima.parse(longtext);
-		var text = JSON.stringify(json, null, '\t'	);
-		writefile(target + '.json', text, options);
-	}
-	*/
-
 	/**
 	 * Compress concatenated files.
 	 * @param {String} filepath
@@ -163,7 +155,7 @@ module.exports = function(grunt) {
 	 * overhead version of the this._super...
 	 */
 	function superkeyword(js) {
-		return js;
+		return js; //suber.pseudokeyword(js);
 	}
 
 	/**

@@ -47,7 +47,7 @@ module.exports = function ( grunt ) {
 		spiritual : {
 			test : {
 				files : {
-					"test/testing.js" : [ '../spiritual-gui/src/modules/spirits.module/TEMP.json' ]
+					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/TEMP.json' ]
 				}
 			}
 			/*
@@ -85,7 +85,7 @@ module.exports = function ( grunt ) {
 
 	// build
 	grunt.registerTask ( "default", [
-		'copy:fake_node_module'
+		//'copy:fake_node_module'
 	]);
 
 };
