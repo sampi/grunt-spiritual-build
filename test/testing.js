@@ -27,26 +27,18 @@ gui = gui.Object.extend(gui, {
 	 */
 	MODE_FUNNY: "funny",
 
-	/*
-	 * Broadcasts
-	 */
+	// broadcasts
 	BROADCAST_KICKSTART: "gui-broadcast-kickstart",
 	BROADCAST_WILL_SPIRITUALIZE: "gui-broadcast-will-spiritualize",
 	BROADCAST_DID_SPIRITUALIZE: "gui-broadcast-did-spiritualize",
-
-	/*
-	 * Actions
-	 */
+	
+	// actions
 	ACTION_DOC_ONSPIRITUALIZED: "gui-action-document-spiritualized",
 
-	/*
-	 * Framework-internal stuff (most should eventually dollarprefix!)
-	 */
+	// framework-internal stuff (most should eventually dollarprefix!)
 	$ACTION_XFRAME_VISIBILITY: "gui-action-xframe-visibility",
 
-	/**
-	 * Lifecycle types (all spirits)
-	 */
+	// lifecycle events (all spirits)
 	LIFE_CONSTRUCT: "gui-life-construct",
 	LIFE_CONFIGURE: "gui-life-configure",
 	LIFE_ENTER: "gui-life-enter",
@@ -60,9 +52,7 @@ gui = gui.Object.extend(gui, {
 	LIFE_INVISIBLE: "gui-life-invisible",
 	LIFE_RENDER: "gui-life-render", // belongs to edb.module really...
 
-	/**
-	 * Lifecycle types (some spirits)
-	 */
+	// ifecycle events (some spirits)
 	LIFE_IFRAME_CONSTRUCT: "gui-life-iframe-construct",
 	LIFE_IFRAME_DOMCONTENT: "gui-life-iframe-domcontent",
 	LIFE_IFRAME_SPIRITUALIZED: "gui-life-iframe-spiritualized",
@@ -70,22 +60,18 @@ gui = gui.Object.extend(gui, {
 	LIFE_IFRAME_ONHASH: "gui-life-iframe-onhash",
 	LIFE_IFRAME_UNLOAD: "gui-life-iframe-unload",
 
-	/**
-	 * Tick types (timed events)
-	 */
+	// tick types (timed events)
 	$TICK_INSIDE: "gui-tick-spirits-inside",
 	$TICK_OUTSIDE: "gui-tick-spirits-outside",
 
-	/**
-	 * Crawler types
-	 */
+	// crawler identification strings
 	CRAWLER_SPIRITUALIZE: "gui-crawler-spiritualize",
 	CRAWLER_MATERIALIZE: "gui-crawler-materialize",
 	CRAWLER_DETACH: "gui-crawler-detach",
-	CRAWLER_DISPOSE: "gui-crawler-dispose", // ??????
+	CRAWLER_DISPOSE: "gui-crawler-dispose", // TODO: what is this?
 	CRAWLER_ACTION: "gui-crawler-action",
-	CRAWLER_VISIBLE: "gui-crawler-visible",
-	CRAWLER_INVISIBLE: "gui-crawler-invisible",
+	CRAWLER_VISIBLE: "gui-crawler-visible", // TODO: move to plugin
+	CRAWLER_INVISIBLE: "gui-crawler-invisible", // TODO: move to plugin
 
 	/** 
 	 * CSS classnames
@@ -103,8 +89,9 @@ gui = gui.Object.extend(gui, {
 	/**
 	 * Magic attributes to trigger spirit association and configuration.
 	 * By default we support "gui" but you may prefer to use "data-gui".
+	 * @type {Array<string>}
 	 */
-	attributes: ["gui"], // @TODO: move from proto to constructor?
+	attributes: null,
 
 	/**
 	 * Possess element and descendants.
@@ -166,43 +153,8 @@ gui = gui.Object.extend(gui, {
 	},
 
 	/**
-	 * Channel spirits on startup.
-	 * Called by the {gui.Guide}
-	 * @see {gui.Guide}
-	 */
-	start: function() {
-		this._oninit();
-		this._gone = true;
-		this._then = new gui.Then();
-		if (this._todochannels) {
-			this._channelAll(this._todochannels);
-			this._todochannels = null;
-		}
-		if (!this._pingpong) {
-			gui.Tick.add([gui.$TICK_INSIDE, gui.$TICK_OUTSIDE], this, this.$contextid);
-			//this._spinatkrampe();
-			this._then.now();
-		}
-		return this._then;
-	},
-
-	/**
-	 * Kickstart Spiritual manuallay. Use this if you somehow
-	 * load Spiritual after DOMContentLoaded event has fired.
-	 */
-	kickstart: function() {
-		switch (document.readyState) {
-			case "interactive":
-			case "complete":
-				gui.Broadcast.dispatchGlobal(gui.BROADCAST_KICKSTART);
-				break;
-		}
-	},
-
-	/**
-	 * Get spirit for argument.
-	 * TODO: argument expected to be an `$instanceid` for now.
-	 * TODO: fuzzy resolver to accept elements and queryselectors
+	 * Get spirit for fuzzy argument. 
+	 * TODO: Delegate this to {gui.DOMPlugin}
 	 * @param {String|Element} arg
 	 * @returns {gui.Spirit}
 	 */
@@ -268,10 +220,6 @@ gui = gui.Object.extend(gui, {
 		}
 	},
 
-	channels: function() {
-		console.error('Deprecated API is deprecated: gui.channels()');
-	},
-
 	/**
 	 * Has channels?
 	 * @returns {boolean}
@@ -335,16 +283,13 @@ gui = gui.Object.extend(gui, {
 		var key = spirit.$instanceid;
 		delete all.inside[key];
 		delete all.outside[key];
-		this._jensen(spirit);
+		this._stoptracking(spirit);
 	},
-
-
-	// Internal ..................................................................
 
 	/**
 	 * Register spirit inside a main document.
 	 * Evaluate new arrivals after 4 millisec.
-	 * TODO: move? rename?
+	 * TODO: Move to {gui.Guide}
 	 * @param {gui.Spirit} spirit
 	 */
 	inside: function(spirit) {
@@ -363,7 +308,7 @@ gui = gui.Object.extend(gui, {
 	/**
 	 * Register spirit outside document. This schedules the spirit
 	 * for destruction unless reinserted somewhere else (and soon).
-	 * TODO: move? rename?
+	 * TODO: Move to {gui.Guide}
 	 * @param {gui.Spirit} spirit
 	 */
 	outside: function(spirit) {
@@ -372,23 +317,10 @@ gui = gui.Object.extend(gui, {
 		if (!all.outside[key]) {
 			if (all.inside[key]) {
 				delete all.inside[key];
-				this._jensen(spirit);
+				this._stoptracking(spirit);
 			}
 			all.outside[key] = spirit;
 			gui.Tick.dispatch(gui.$TICK_OUTSIDE, 0, this.$contextid);
-		}
-	},
-
-	/**
-	 *
-	 */
-	_jensen: function(spirit) {
-		var incoming = this._spirits.incoming;
-		if (incoming.length) {
-			var i = incoming.indexOf(spirit);
-			if (i > -1) {
-				gui.Array.remove(incoming, i);
-			}
 		}
 	},
 
@@ -424,6 +356,39 @@ gui = gui.Object.extend(gui, {
 		}
 	},
 
+	/**
+	 * Do something when everything is spiritualized (synchronously after 
+	 * DOMContentLoaded). Or if that's already too late, just do it now.
+	 * TODO: support `onready` object handler
+	 * @overwrites {gui#ready} A stub implementation
+	 * @param @optional {function} action
+	 * @param @optional {object} thisp
+	 * @returns {boolean} True when ready already
+	 */
+	ready: function(action, thisp) {
+		var is = this.spiritualized;
+		if (arguments.length) {
+			if (is) {
+				action.call(thisp);
+			} else {
+				this._readycallbacks = this._readycallbacks || [];
+				this._readycallbacks.push(function() {
+					if (gui.debug) {
+						try {
+							action.call(thisp);
+						} catch (exception) {
+							console.error(action.toString());
+							throw exception;
+						}
+					} else {
+						action.call(thisp);
+					}
+				});
+			}
+		}
+		return is;
+	},
+
 
 	// Private ...................................................................
 
@@ -448,18 +413,71 @@ gui = gui.Object.extend(gui, {
 	_todochannels: null,
 
 	/**
-	 * Invoked at parse time (so right now).
+	 * @type {Array<function>}
+	 */
+	_readycallbacks: null,
+
+	/**
+	 * Invoked at parse time (so right now). 
+	 * @returns {gui.Namespace} myself
 	 */
 	_initspirits: function() {
+		this.attributes = ["gui"];
 		this._arrivals = Object.create(null);
 		this._channels = [];
-		this._spaces = ["gui"];
 		this._spirits = {
 			incoming: [], // spirits just entered the DOM (some milliseconds ago)
 			inside: Object.create(null), // spirits positioned in page DOM ("entered" and "attached")
 			outside: Object.create(null) // spirits removed from page DOM (currently "detached")
 		};
+		gui.Broadcast.add(gui.BROADCAST_TODOM, {
+			onbroadcast: function() {
+				gui._getready();
+				gui.Guide.$startGuiding();
+				gui._nowready();
+			}
+		});
 		return this;
+	},
+
+	/**
+	 *
+	 */
+	_getready: function() {
+		gui.Tick.add([gui.$TICK_INSIDE, gui.$TICK_OUTSIDE], this);
+		if (this._todochannels) {
+			this._channelAll(this._todochannels);
+			this._todochannels = null;
+		}
+	},
+
+	/**
+	 * Initial spirits are ready. 
+	 * Run accumulated callbacks.
+	 */
+	_nowready: function() {
+		this.spiritualized = true;
+		var list = this._readycallbacks;
+		if (list) {
+			while (list.length) {
+				list.shift()();
+			}
+			this._readycallbacks = null;
+		}
+	},
+
+	/**
+	 * TODO: Move to {gui.Guide}
+	 * @param {gui.Spirit} spirit
+	 */
+	_stoptracking: function(spirit) {
+		var incoming = this._spirits.incoming;
+		if (incoming.length) {
+			var i = incoming.indexOf(spirit);
+			if (i > -1) {
+				gui.Array.remove(incoming, i);
+			}
+		}
 	},
 
 	/**
@@ -469,7 +487,7 @@ gui = gui.Object.extend(gui, {
 	 */
 	_channelOne: function(select, klass) {
 		var spirit;
-		if (this._gone) {
+		if (this.initialized) {
 			if (typeof klass === "string") {
 				spirit = gui.Object.lookup(klass);
 			} else {
@@ -490,7 +508,7 @@ gui = gui.Object.extend(gui, {
 	 *
 	 */
 	_channelAll: function(channels) {
-		if (this._gone) {
+		if (this.initialized) {
 			channels.forEach(function(c) {
 				this._channelOne(c[0], c[1]);
 			}, this);
@@ -529,113 +547,7 @@ gui = gui.Object.extend(gui, {
 
 }._initspirits());
 
-
-
-/**
- * Support spirits.
- */
-gui.Module.mixin ({
-
-	/**
-	 * Plugins for all spirits.
-	 * @type {Map<String,gui.Plugin>}
-	 */
-	plugin: null,
-
-	/**
-	 * Mixins for all spirits.
-	 * @type {Map<String,function>}
-	 */
-	mixin: null,
-
-	/**
-	 * Channeling spirits to CSS selectors.
-	 * @type {Map<Array<Array<String,gui.Spirit>>}
-	 */
-	channel: null,
-
-	/**
-	 * Called before spirits kick in.
-	 * @return {Window} context
-	 */
-	onbeforespiritualize: function() {},
-
-	/**
-	 * Called after spirits kicked in.
-	 * @return {Window} context
-	 */
-	onafterspiritualize: function() {},
-
-	
-	// Privileged ................................................................
-
-	/**
-	 * Secret constructor.
-	 *
-	 * 1. extend {gui.Spirit} with mixins
-	 * 2. inject plugins for (all) spirits
-	 * 3. channel spirits to CSS selectors
-	 * @overwrites {gui.Module.$onconstruct}
-	 */
-	$onconstruct: function() {
-		['channels', 'mixins', 'plugins'].forEach(function(x) {
-			if (this[x]) {
-				console.error('Deprecated API is deprecated: ' + x);
-			}
-		}, this);
-		if (gui.Type.isObject(this.mixin)) {
-			gui.Spirit.mixin(this.mixin);
-		}
-		if (gui.Type.isObject(this.plugin)) {
-			gui.Object.each(this.plugin, function(prefix, plugin) {
-				if (gui.Type.isDefined(plugin)) {
-					gui.Spirit.plugin(prefix, plugin);
-				} else {
-					console.error("Undefined plugin for prefix: " + prefix);
-				}
-			});
-		}
-		if (gui.Type.isArray(this.channel)) {
-			gui.channel(this.channel);
-		}
-		if(gui.Type.isFunction(this.oncontextinitialize)) {
-			this.oncontextinitialize(window); // TODO: just use onconstruct!
-		}
-		this._monitorspirits();
-	},
-
-
-	// Private ...................................................................
-
-	/**
-	 * Support `onbeforespiritualize` and `onafterspiritualize`.
-	 */
-	_monitorspirits: function() {
-		var that = this;
-		var msg1 = gui.BROADCAST_WILL_SPIRITUALIZE;
-		var msg2 = gui.BROADCAST_DID_SPIRITUALIZE;
-		gui.Broadcast.addGlobal([msg1, msg2], {
-			onbroadcast: function(b) {
-				if (b.data === gui.$contextid) {
-					gui.Broadcast.removeGlobal(b.type, this);
-					switch (b.type) {
-						case msg1:
-							if (gui.Type.isFunction(that.onbeforespiritualize)) {
-								that.onbeforespiritualize(window); // TODO: kill arg
-							}
-							break;
-						case msg2:
-							if (gui.Type.isFunction(that.onafterspiritualize)) {
-								that.onafterspiritualize(window); // TODO: kill arg
-							}
-							break;
-					}
-				}
-			}
-		});
-	}
-
-});
+gui.displayName = "gui"; // will it float?
 
 
 
@@ -1570,15 +1482,14 @@ gui.ConfigPlugin = gui.Plugin.extend({
 
 	/**
 	 * Typecast the value.
-	 * TODO: Move the EDB hack into EDB module somehow.
+	 * TODO: Move the EDB hack into EDBML module somehow.
 	 * @param {object} value
 	 * @returns {object}
 	 */
 	_revaluate: function(value) {
 		if (gui.Type.isString(value)) {
-			// TODO: unhack this
-			if (gui.hasModule('edb@wunderbyte.com') && value.startsWith('edb.$get')) {
-				value = window.edb.$get(gui.KeyMaster.extractKey(value)[0]);
+			if (gui.hasModule('edbml@wunderbyte.com') && value.startsWith('edbml.$get')) {
+				value = window.edbml.$get(gui.KeyMaster.extractKey(value)[0]);
 			} else {
 				value = gui.Type.cast(value);
 				if (gui.Type.isString(value)) {
@@ -2189,11 +2100,11 @@ gui.CSSPlugin = (function using(chained, confirmed) {
 
 		/**
 		 * Add or remove classname(s) according to first argument.
-		 * @param {boolean} on
+		 * @param {boolean|object} on
 		 * @param {String} name
 		 * @returns {gui.CSSPlugin}
 		 */
-		shift: confirmed("boolean", "string|array")(chained(function(on, name) {
+		shift: confirmed("*", "string|array")(chained(function(on, name) {
 			var elm = this.spirit.element;
 			gui.Array.make(name).forEach(function(n) {
 				gui.CSSPlugin.shift(elm, on, n);
@@ -2356,20 +2267,16 @@ gui.CSSPlugin = (function using(chained, confirmed) {
 		/**
 		 * Add or remove classname according to second argument.
 		 * @param {Element} element
-		 * @param {boolean} on
+		 * @param {boolean|object|null|undefined} on
 		 * @param {String} name
 		 * @returns {function}
 		 */
 		shift: chained(function(element, on, name) {
-			if (gui.Type.isBoolean(on)) {
-				if (on) {
+				if (!!on) { // coerce to boolean
 					this.add(element, name);
 				} else {
 					this.remove(element, name);
 				}
-			} else {
-				console.error("Deprecated API is deprecated");
-			}
 		}),
 
 		/**
@@ -4011,42 +3918,24 @@ gui.SpritePlugin = gui.Plugin.extend({
 gui.Spirit = gui.Class.create(Object.prototype, {
 
 	/**
-	 * Unique key for this spirit instance.
-	 * @TODO: Uppercase to imply read-only.
-	 * @type {String}
-	 */
-	$instanceid: null,
-
-	/**
-	 * Matches the property `$contextid` of the local `gui` object.
-	 * TODO: rename this property
-	 * TODO: perhapse deprecate?
-	 * @type {String}
-	 */
-	$contextid: null,
-
-	/**
-	 * @type {boolean}
-	 */
-	$destructed: false,
-
-	/**
 	 * Spirit element.
 	 * @type {Element}
 	 */
 	element: null,
 
 	/**
-	 * Containing document.
+	 * Containing document (don't use).
+	 * @deprecated
 	 * @type {Document}
 	 */
-	document: null,
+	document: document,
 
 	/**
-	 * Containing window.
+	 * Containing window (don't use).
+	 * @deprecated
 	 * @type {Window}
 	 */
-	window: null,
+	window: window,
 
 	/**
 	 * Identification.
@@ -4054,6 +3943,17 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	 */
 	toString: function() {
 		return "[object gui.Spirit]";
+	},
+
+	/**
+	 * Exorcise spirit from element. 
+	 * TODO: This whole thing with 'dispose' for all {gui.Class} things
+	 */
+	exorcise: function() {
+		if (!this.life.destructed) {
+			gui.Spirit.$destruct(this); // API user should cleanup here
+			gui.Spirit.$dispose(this); // everything is destroyed here
+		}
 	},
 
 
@@ -4102,7 +4002,7 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	onready: function() {},
 
 	/**
-	 * Experimental.
+	 * Experimental and not even supported.
 	 */
 	oninit: function() {},
 
@@ -4152,13 +4052,35 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	// Privileged ................................................................
 
 	/**
+	 * Unique key for this spirit instance.
+	 * @TODO: Uppercase to imply read-only.
+	 * @type {String}
+	 */
+	$instanceid: null,
+
+	/**
+	 * Matches the property `$contextid` of the local `gui` object.
+	 * TODO: rename this property
+	 * TODO: perhapse deprecate?
+	 * TODO: really just deprecate!
+	 * @type {String}
+	 */
+	$contextid: null,
+
+	/**
+	 * Don't try anything funny.
+	 * @type {boolean}
+	 */
+	$destructed: false,
+
+	/**
 	 * Secret constructor invoked before `onconstruct`.
 	 * @param {Element} elm
 	 * @param {Document} doc
 	 * @param {Window} win
 	 * @param {String} sig
 	 */
-	$onconstruct: function(elm, doc, win, sig) {
+	$onconstruct: function(elm, doc, win, sig) { // TODO: get rid of all these!
 		this.element = elm;
 		this.document = doc;
 		this.window = win;
@@ -4222,7 +4144,7 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	}
 
 
-}, { // Xstatic ................................................................
+}, { // Xstatic (copied onto subclass constructors) ............................
 
 	/**
 	 * Portal spirit into iframes via the `gui.portal` method?
@@ -4289,9 +4211,11 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	/**
 	 * Assign plugin to prefix, checking for naming collision. Prepared for
 	 * a scenario where spirits may have been declared before plugins load.
+	 * TODO: Stamp the plugin on the prototype instead, if at all possible.
 	 * @param {String} prefix "att", "dom", "action", "event" etc
 	 * @param {function} plugin Constructor for plugin
 	 * @param @optional {boolean} override Disable collision detection
+	 * @returns {ts.gui.Spirit}
 	 */
 	plugin: function(prefix, plugin, override) {
 		var plugins = this.$plugins;
@@ -4307,6 +4231,7 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 		} else {
 			console.error("Plugin naming crash in " + this + ": " + prefix);
 		}
+		return this;
 	},
 
 
@@ -4319,7 +4244,7 @@ gui.Spirit = gui.Class.create(Object.prototype, {
 	$plugins: Object.create(null)
 
 
-}, { // Static .................................................................
+}, { // Static privileged ......................................................
 
 	/**
 	 * Spirit construct gets called by the secret constructor `$onconstruct`.
@@ -5123,8 +5048,8 @@ gui.DOMChanger = {
 	 * Declare `spirit` as a fundamental property of things.
 	 * @param {Window} win
 	 */
-	setup: function(win) {
-		var proto = win.Element.prototype;
+	init: function() {
+		var proto = Element.prototype;
 		if (gui.Type.isDefined(proto.spirit)) {
 			throw new Error("Spiritual loaded twice?");
 		} else {
@@ -5133,101 +5058,16 @@ gui.DOMChanger = {
 	},
 
 	/**
-	 * Extend native DOM methods in given window scope.
-	 * @param {Window} win
+	 * Extend native DOM methods in given window scope. 
+	 * Wonder what happens now with SVG in Explorer?
 	 */
-	change: function(win) {
-		this.upgrade(win, gui.DOMCombos);
-	},
-
-	/**
-	 * Upgrade DOM methods in window.
-	 * @param {Window} win
-	 * @param {Map<String,function>} combos
-	 */
-	upgrade: function(win, combos) {
-		this._change(win, combos);
+	change: function() {
+		var Elm = gui.Client.isExplorer ? HTMLElement : Element;
+		this._change(Elm.prototype, gui.DOMCombos);
 	},
 
 
 	// Private ...................................................................
-
-	/**
-	 * Extending Element.prototype to intercept DOM updates.
-	 * TODO: Support insertAdjecantHTML
-	 * TODO: Support SVG elements
-	 * @param {Window} win
-	 * @param {Map<String,function} combos
-	 */
-	_change: function _change(win, combos) {
-		if (!this._canchange(Element.prototype, win, combos)) {
-			if (!win.HTMLElement || !this._canchange(HTMLElement.prototype, win)) {
-				this._changeoldgecko(win, combos);
-			}
-		}
-	},
-
-	/**
-	 * OLDER versions of Firefox ignore extending of Element.prototype,
-	 * we must step down the prototype chain.
-	 * @see https://bugzilla.mozilla.org/show_bug.cgi?id=618379 (RESOLVED FIXED)
-	 */
-	_changeoldgecko: function(win, combos) {
-		var did = [];
-		this._tags().forEach(function(tag) {
-			var e = document.createElement(tag);
-			var p = e.constructor.prototype;
-			// alert ( p ); this call throws a BAD_CONVERT_JS
-			if (p !== Object.prototype) { // excluding object and embed tags
-				if (did.indexOf(p) === -1) {
-					this._dochange(p, window, combos);
-					did.push(p); // some elements share the same prototype
-				}
-			}
-		}, this);
-	},
-
-	/**
-	 * OLDER Firefox has to traverse the constructor of *all* elements.
-	 * Object and embed tags excluded because the constructor of
-	 * these elements appear to be identical to Object.prototype.
-	 * @returns {Array<String>}
-	 */
-	_tags: function tags() {
-		return ("a abbr address area article aside audio b base bdi bdo blockquote " +
-			"body br button canvas caption cite code col colgroup command datalist dd del " +
-			"details device dfn div dl dt em fieldset figcaption figure footer form " +
-			"h1 h2 h3 h4 h5 h6 head header hgroup hr html i iframe img input ins kbd keygen " +
-			"label legend li link main map menu meta meter nav noscript ol optgroup option " +
-			"output p param pre progress q rp rt ruby s samp script section select small " +
-			"source span strong style submark summary sup table tbody td textarea tfoot " +
-			"th thead time title tr track ul unknown var video wbr").split(" ");
-	},
-
-	/**
-	 * Can extend given prototype object? If so, do it now.
-	 * @param {object} proto
-	 * @param {Window} win
-	 * @param {Map<String,function} combos
-	 * @returns {boolean} Success
-	 */
-	_canchange: function _canchange(proto, win, combos) {
-		// attempt overwrite
-		var result = false;
-		var test = "it appears to work";
-		var cache = proto.hasChildNodes;
-		proto.hasChildNodes = function() {
-			return test;
-		};
-		// test overwrite and reset back
-		var root = win.document.documentElement;
-		if (root.hasChildNodes() === test) {
-			proto.hasChildNodes = cache;
-			this._dochange(proto, win, combos);
-			result = true;
-		}
-		return result;
-	},
 
 	/**
 	 * Overloading prototype methods and properties.
@@ -5235,8 +5075,8 @@ gui.DOMChanger = {
 	 * @param {Window} win
 	 * @param {Map<String,function} combos
 	 */
-	_dochange: function _dochange(proto, win, combos) {
-		var root = win.document.documentElement;
+	_change: function(proto, combos) {
+		var root = document.documentElement;
 		gui.Object.each(combos, function(name, combo) {
 			this._docombo(proto, name, combo, root);
 		}, this);
@@ -5255,9 +5095,9 @@ gui.DOMChanger = {
 			this._domethod(proto, name, combo);
 		} else {
 			if (gui.Client.isGecko) {
-				this._dogecko(proto, name, combo, root);
+				this._dogeckoaccessor(proto, name, combo, root);
 			} else if (gui.Client.isExplorer) {
-				this._doie(proto, name, combo);
+				this._doieaccessor(proto, name, combo);
 			} else {
 				// WebKit/Safari/Blink relies on the {gui.DOMObserver}
 			}
@@ -5297,26 +5137,28 @@ gui.DOMChanger = {
 		});
 	},
 
-
-	// Disabled ..................................................................
-
 	/**
 	 * Overload property setter for IE.
+	 * TODO: Doesn't work for 'textContent' (should materialize spirits)
 	 * @param {object} proto
 	 * @param {String} name
 	 * @param {function} combo
 	 * @param {Element} root
 	 */
-	_doie: function(proto, name, combo) {
+	_doieaccessor: function(proto, name, combo) {
 		var base = Object.getOwnPropertyDescriptor(proto, name);
-		Object.defineProperty(proto, name, {
-			get: function() {
-				return base.get.call(this);
-			},
-			set: combo(function() {
-				base.apply(this, arguments);
-			})
-		});
+		if(base) {
+			Object.defineProperty(proto, name, {
+				enumerable: true,
+				configurable: true,
+				get: function() {
+					return base.get.call(this);
+				},
+				set: combo(function(value) {
+					base.set.call(this, value);
+				})
+			});
+		}
 	},
 
 	/**
@@ -5326,7 +5168,7 @@ gui.DOMChanger = {
 	 * @param {function} combo
 	 * @param {Element} root
 	 */
-	_dogecko: function(proto, name, combo, root) {
+	_dogeckoaccessor: function(proto, name, combo, root) {
 		var getter = root.__lookupGetter__(name);
 		var setter = root.__lookupSetter__(name);
 		if (getter) { // firefox 20 needs a getter for this to work
@@ -5788,58 +5630,6 @@ gui.Guide = {
 	},
 
 	/**
-	 * Setup spirit management.
-	 */
-	setup: function() {
-		gui.Broadcast.addGlobal(gui.BROADCAST_KICKSTART, this);
-		var hack = gui.Client.isExplorer ? 'loading' : document.readyState;
-		switch (hack) {
-			case "loading":
-				document.addEventListener("DOMContentLoaded", this, false);
-				window.addEventListener("load", this, false);
-				break;
-			case "interactive":
-				this._ondom();
-				window.addEventListener("load", this, false);
-				break;
-			case "complete":
-				//this._ondom();
-				break;
-		}
-	},
-
-	/**
-	 * Handle startup and shutdown events.
-	 * @param {Event} e
-	 */
-	handleEvent: function(e) {
-		e.currentTarget.removeEventListener(e.type, this, false);
-		switch (e.type) {
-			case "DOMContentLoaded":
-				this._ondom();
-				break;
-			case "load":
-				//this._onload();
-				break;
-		}
-	},
-
-	/**
-	 * Elaborate setup to spiritualize document after async
-	 * evaluation of gui-stylesheets (future project).
-	 * @see {gui.StyleSheetSpirit}
-	 * @param {gui.Broadcast} b
-	 */
-	onbroadcast: function(b) {
-		switch (b.type) {
-			case gui.BROADCAST_KICKSTART:
-				gui.Broadcast.removeGlobal(b.type, this);
-				this._step1(window, document);
-				break;
-		}
-	},
-
-	/**
 	 * Invoke ondetach for element spirit and descendants spirits.
 	 * TODO: Definitely rename this to $ and think something about it
 	 * @param {Element|gui.Spirit} target
@@ -5874,17 +5664,6 @@ gui.Guide = {
 	},
 
 	/**
-	 * Disassociate DOM element from Spirit instance.
-	 * @param {gui.Spirit} spirit
-	 */
-	exorcise: function(spirit) {
-		if (!spirit.life.destructed) {
-			gui.Spirit.$destruct(spirit); // API user should cleanup here
-			gui.Spirit.$dispose(spirit); // everything is destroyed here
-		}
-	},
-
-	/**
 	 * Suspend spiritualization and materialization during operation.
 	 * @param {function} operation
 	 * @param @optional {object} thisp
@@ -5899,6 +5678,15 @@ gui.Guide = {
 	
 
 	// Privileged ................................................................
+
+	/**
+	 * Release the spirits and proclaim the document spiritualized.
+	 */
+	$startGuiding: function() {
+		gui.Broadcast.dispatch(gui.BROADCAST_WILL_SPIRITUALIZE);
+		this._spiritualizeinitially();
+		gui.Broadcast.dispatch(gui.BROADCAST_DID_SPIRITUALIZE);
+	},
 
 	/**
 	 * Possess element and descendants.
@@ -5952,12 +5740,9 @@ gui.Guide = {
 
 	/**
 	 * Fires on window unload.
+	 * TODO: what is this?
 	 */
-	$shutdown: function() {
-		gui.Broadcast.dispatch(gui.BROADCAST_WILL_UNLOAD);
-		gui.Broadcast.dispatch(gui.BROADCAST_UNLOAD);
-		this.$materialize(document);
-	},
+	$shutdown: function() {},
 	
 
 	// Private ...................................................................
@@ -5969,6 +5754,27 @@ gui.Guide = {
 	_suspended: false,
 
 	/**
+	 * 1. Always spiritualize the HTML element {gui.DocumentSpirit}.
+	 * 2. Robot mode: Overload native DOM methods
+	 * 3. Robot mode: Monitor DOM for unhandled mutations (WebKit)
+	 * 4. Robot mode: Spiritualize everything
+	 * @param {Window} win
+	 * @param {Document} doc
+	 */
+	_spiritualizeinitially: function() {
+		var root = document.documentElement;
+		gui.DOMChanger.init();
+		this.$spiritualizeOne(root);
+		if (gui.mode === gui.MODE_ROBOT) {
+			gui.DOMChanger.change();
+			if (gui.Client.isWebKit) {
+				gui.DOMObserver.observe();
+			}
+			this.$spiritualizeSub(root);
+		}
+	},
+
+	/**
 	 * Continue with spiritualize/materialize of given node?
 	 * @returns {boolean}
 	 */
@@ -5976,71 +5782,6 @@ gui.Guide = {
 		return node && !this._suspended &&
 			gui.DOMPlugin.embedded(node) &&
 			node.nodeType === Node.ELEMENT_NODE;
-	},
-
-	/**
-	 * Fires on document.DOMContentLoaded (or if after, as soon as this script loads).
-	 * TODO: gui.DOMObserver crashes with JQuery when both do stuff on DOMContentLoaded
-	 * TODO: (can't setImmedeate to bypass JQuery, we risk onload being fired first)
-	 * @see http://stackoverflow.com/questions/11406515/domnodeinserted-behaves-weird-when-performing-dom-manipulation-on-body
-	 * @param {gui.EventSummary} sum
-	 */
-	_ondom: function() {
-		if (gui.autostart) {
-			// TODO: move meta stuff to gui.Document
-			var meta = document.querySelector('meta[name="gui.autostart"]');
-			if (!meta || gui.Type.cast(meta.getAttribute("content")) !== false) {
-				this._step1(window, document); // else await gui.kickstart()
-			}
-		}
-	},
-
-	/**
-	 * @param {Window} win
-	 * @param {Document} doc
-	 */
-	_step1: function(win, doc) {
-		gui.Broadcast.removeGlobal(gui.BROADCAST_KICKSTART, this);
-		gui.start().then(function() {
-			this._step2(win, doc); // channel spirits
-		}, this);
-	},
-
-	/**
-	 * Spiritualize elements and proclaim the document spiritualized.
-	 * @param {Window} win
-	 * @param {Document} doc
-	 */
-	_step2: function(win, doc) {
-		var sig = win.gui.$contextid;
-		gui.DOMChanger.setup(win);
-		gui.broadcastGlobal(gui.BROADCAST_WILL_SPIRITUALIZE, sig);
-		this._step3(win, doc);
-		gui.broadcastGlobal(gui.BROADCAST_DID_SPIRITUALIZE, sig);
-	},
-
-	/**
-	 * Always spiritualize the root {gui.DocumentSpirit}.
-	 * 1. Overload native DOM methods in native mode?
-	 * 2. Monitor DOM for unhandled mutations in debug mode?
-	 * 3. Potentially spiritualize all other spirits?
-	 * @param {Window} win
-	 * @param {Document} doc
-	 */
-	_step3: function(win, doc) {
-		var root = doc.documentElement;
-		gui.spiritualizeOne(root);
-		if (gui.mode !== gui.MODE_HUMAN) {
-			gui.DOMChanger.change(win);
-			if (gui.Client.isWebKit) {
-				gui.DOMObserver.observe(win);
-			}
-			if (gui.debugmutations) {
-				console.warn('Deprecated API is deprecated: gui.debugmutations');
-			}
-			gui.spiritualizeSub(root);
-			gui.$onready();
-		}
 	},
 
 	/**
@@ -6137,7 +5878,7 @@ gui.Guide = {
 	 * order. Finally call `onready` in reverse document order.
 	 * @param {Array<gui.Spirit>} spirits
 	 */
-	_sequence: (function() {
+	_sequence: (function generatefuntion() {
 		function configure(spirit) {
 			if (!spirit.life.configured) {
 				gui.Spirit.$configure(spirit);
@@ -6277,13 +6018,116 @@ gui.Guide = {
 
 };
 
+
+
 /**
- * Start managing 
- * all the stuff.
+ * Support spirits.
  */
-(function setup() {
-	gui.Guide.setup();
-})();
+gui.Module.mixin ({
+
+	/**
+	 * Plugins for all spirits.
+	 * @type {Map<String,gui.Plugin>}
+	 *
+	plugin: null,
+
+	/**
+	 * Mixins for all spirits.
+	 * @type {Map<String,function>}
+	 *
+	mixin: null,
+
+	/**
+	 * Channeling spirits to CSS selectors.
+	 * @type {Map<Array<Array<String,gui.Spirit>>}
+	 *
+	channel: null,
+	*/
+
+	/**
+	 * Called before spirits kick in.
+	 * @return {Window} context
+	 */
+	onbeforespiritualize: function() {},
+
+	/**
+	 * Called after spirits kicked in.
+	 * @return {Window} context
+	 */
+	onafterspiritualize: function() {},
+
+	
+	// Privileged ................................................................
+
+	/**
+	 * Secret constructor.
+	 *
+	 * 1. Extend {gui.Spirit} with mixins
+	 * 2. Channel spirits to CSS selectors
+	 * 3. Assign plugins to all {gui.Spirit}
+	 * @overwrites {gui.Module.$onconstruct}
+	 */
+	$onconstruct: function(name) {
+		this.$modname = name;
+		gui.Module.$init(this);
+		this.toString = function() {
+			return '[module ' + name + ']';
+		};
+	}
+
+
+}, {}, { // Static .............................................................
+
+	/**
+	 * @param {gui.Module} module
+	 */
+	$init: function(module) {
+		if (gui.Type.isObject(module.mixin)) {
+			gui.Spirit.mixin(module.mixin);
+		}
+		if (gui.Type.isArray(module.channel)) {
+			gui.channel(module.channel);
+		}
+		if (gui.Type.isObject(module.plugin)) {
+			gui.Object.each(module.plugin, function(prefix, Plugin) {
+				if (gui.Type.isDefined(Plugin)) {
+					gui.Spirit.plugin(prefix, Plugin);
+				} else { // TODO: move check into gui.Spirit.plugin
+					console.error("Undefined plugin for prefix: " + prefix);
+				}
+			});
+		}
+	}
+
+});
+
+/**
+ * @param {Array<gui.Module>} modules
+ */
+(function catchup(modules) {
+	modules.forEach(gui.Module.$init);
+}(gui.Module._modules));
+
+/**
+ * Hookup modules to spirits lifecycle. 
+ * Broadcasts dispatched by {gui.Guide}.
+ * @param {Array<gui.Module>} modules
+ */
+(function hookup(modules) {
+	gui.Object.each({
+		'onbeforespiritualize': gui.BROADCAST_WILL_SPIRITUALIZE,
+		'onafterspiritualize': gui.BROADCAST_DID_SPIRITUALIZE
+	}, function associate(action, broadcast) {
+		gui.Broadcast.add(broadcast, {
+			onbroadcast: function() {
+				modules.forEach(function(module) {
+					module[action]();
+				});
+			}
+		});
+	});
+}(gui.Module._modules));
+
 
 
 

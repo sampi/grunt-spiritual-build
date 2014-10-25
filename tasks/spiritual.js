@@ -1,9 +1,9 @@
 var path = require("path");
 var ugli = require("uglify-js");
-var hint = require("jshint").JSHINT;
 var chalk = require('chalk');
 var suber = require('./super');
 var sixto5 = require('6to5');
+var syntax = require('./syntax');
 
 /**
  * Here it comes.
@@ -38,66 +38,15 @@ module.exports = function(grunt) {
 	function process(files, options) {
 		Object.keys(files).forEach(function(t) {
 			var target = grunt.template.process(t);
-			var sources = files[t].map(function(s) {
+			var shortlist = files[t].map(function(s) {
 				return path.normalize(options.base + '/' + grunt.template.process(s));
 			});
-			if (validate(sources)) {
-				concat(target, sources, options);
+			var longlist = expand(shortlist);
+			if (syntax.valid(grunt, longlist)) {
+				concat(target, longlist, options);
 				compress(target, options);
 			}
 		});
-	}
-
-	/**
-	 * @returns {boolean}
-	 */
-	function validate(shortlist) {
-		var filemap = mapcontents(shortlist);
-		var configs = __dirname + "/jshint.json";
-		var options = grunt.file.readJSON(configs);
-		var globals = options.globals;
-		delete options.globals;
-		return allvalid(filemap, options, globals);
-	}
-
-	/**
-	 * @returns {boolean}
-	 */
-	function allvalid(files, options, globals) {
-		return Object.keys(files).every(function(filepath) {
-			var content = files[filepath];
-			if (hint(content, options, globals)) {
-				return true;
-			} else {
-				report(filepath, hint.errors[0]);
-				return false;
-			}
-		});
-	}
-
-	/**
-	 *
-	 */
-	function mapcontents(shortlist) {
-		var longlist = expand(shortlist);
-		var sources = contents(longlist);
-		var map = {};
-		sources.forEach(function(src, i) {
-			map[longlist[i]] = src;
-		});
-		return map;
-	}
-
-	/**
-	 *
-	 */
-	function report(filepath, error) {
-		console.log(
-			filepath + ": \n" +
-			"line " + error.line + ", " +
-			"char " + error.character + ": " +
-			error.reason
-		);
 	}
 
 	/**
@@ -106,8 +55,7 @@ module.exports = function(grunt) {
 	 * @param {Array<String>} shortlist
 	 * @param {Map<String,String} options
 	 */
-	function concat(target, shortlist, options) {
-		var longlist = expand(shortlist);
+	function concat(target, longlist, options) {
 		var longtext = collect(longlist);
 		writefile(target, longtext, options);
 	}
@@ -129,7 +77,7 @@ module.exports = function(grunt) {
 	 */
 	function collect(longlist) {
 		return enclose(
-			contents(longlist).join(SPACER)
+			getmanhandledcontents(longlist).join(SPACER)
 		);
 	}
 
@@ -137,7 +85,7 @@ module.exports = function(grunt) {
 	 * @param {Array<String>} longlist
 	 * @returns {Array<String>}
 	 */
-	function contents(longlist) {
+	function getmanhandledcontents(longlist) {
 		var es6 = false;
 		return longlist.filter(
 			existence
@@ -151,11 +99,11 @@ module.exports = function(grunt) {
 	}
 
 	/**
-	 * TODO: potentially implement a minimal 
+	 * TODO: potentially implement a minimal
 	 * overhead version of the this._super...
 	 */
 	function superkeyword(js) {
-		return js; //suber.pseudokeyword(js);
+		return suber.pseudokeyword(js);
 	}
 
 	/**

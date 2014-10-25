@@ -1,26 +1,29 @@
 /**
+ * Replace all psudosuperkeywords with 
+ * regular `prototype.call` statements.
  * @param {string} js
  * @param {string} keyword
  */
 exports.pseudokeyword = function(js, keyword) {
-	return run(js, '', (keyword || 'this._super') + '.', js.length - 1);
+	return run(js, (keyword || 'this._super') + '.', js.length - 1);
 };
 
 
 // Private .....................................................................
 
 /**
+ * Run the computer on all characters in input.
  * @param {string} input
  * @param {string} output
  * @param {string} keyword
  * @param {number} endindex
  */
-function run(input, output, keyword, endindex) {
+function run(input, keyword, endindex) {
 
 	var METHODNAME = /\w|\$/;
 	var CLASSNAME = /\w|\$|\./;
 
-	var 
+	var output = '',
 		character = '',
 		prototype = null,
 		charindex = 0,
@@ -44,7 +47,10 @@ function run(input, output, keyword, endindex) {
 	}
 
 	/**
+	 * Did the code just itend to extend or mixin something? 
+	 * If so, we switch to super keyword replacement modus.
 	 * @param {string} subword
+	 * @returns {boolean} True if no match (so check another match)
 	 */
 	function checkextension(subword) {
 		var checknext = true;
@@ -58,7 +64,7 @@ function run(input, output, keyword, endindex) {
 	}
 
 	/**
-	 * TODO:
+	 * Did the code just intend a supercall?
 	 */
 	function checksupercall() {
 		if (findbehind(keyword)) {
@@ -71,7 +77,8 @@ function run(input, output, keyword, endindex) {
 
 	/**
 	 * TODO: zero-index singularity?
-	 * @
+	 * @param {number} index
+	 * @returns {string} 
 	 */
 	function getprototypeat(index) {
 		var prev = buffer.substr(0, index);
@@ -81,7 +88,8 @@ function run(input, output, keyword, endindex) {
 	}
 
 	/**
-	 *
+	 * @param {string} string
+	 * @returns {booleans}
 	 */
 	function findbehind(string) {
 		var nowlength, hindsight;
@@ -95,6 +103,11 @@ function run(input, output, keyword, endindex) {
 		return false;
 	}
 
+	/**
+	 * Magic word is not a substring of a longer word?
+	 * @param {string} subword
+	 * @returns {booleans}
+	 */
 	function endshere(subword) {
 		var nextindex = charindex + 1;
 		return input.length === nextindex ||
@@ -102,21 +115,24 @@ function run(input, output, keyword, endindex) {
 	}
 
 	/**
-	 *
+	 * Sugar.
+	 * @returns {number}
 	 */
 	function bufferlength() {
 		return buffer.length;
 	}
 
 	/**
-	 *
+	 * Compute index of string in buffer.
+	 * @param {string} string
+	 * @return {number}
 	 */
 	function startindex(string) {
 		return bufferlength() - string.length;
 	}
 
 	/**
-	 *
+	 * TODO: all sorts of edge cases
 	 */
 	function processsupercall() {
 		if (methodname) {
@@ -143,7 +159,7 @@ function run(input, output, keyword, endindex) {
 	}
 
 	/**
-	 *
+	 * Flush buffer to output.
 	 */
 	function flush() {
 		output += buffer;
@@ -154,6 +170,9 @@ function run(input, output, keyword, endindex) {
 		superargs = false;
 	}
 
+	/**
+	 * Process chars in one way.
+	 */
 	function somechars() {
 		if(!stringmode) {
 			switch (character) {
@@ -185,6 +204,9 @@ function run(input, output, keyword, endindex) {
 		}
 	}
 
+	/**
+	 * Process chars in another way.
+	 */
 	function morechars() {
 		switch (character) {
 			case ';':
@@ -220,6 +242,6 @@ function run(input, output, keyword, endindex) {
 		charindex++;
 	}
 
-	// flush and cover
+	// flush all to output
 	return output + buffer;
 }

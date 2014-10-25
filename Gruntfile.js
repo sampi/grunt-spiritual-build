@@ -47,7 +47,7 @@ module.exports = function ( grunt ) {
 		spiritual : {
 			test : {
 				files : {
-					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/TEMP.json' ]
+					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json' ]
 				}
 			}
 			/*
