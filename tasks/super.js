@@ -1,11 +1,16 @@
 /**
  * Replace all psudosuperkeywords with 
- * regular `prototype.call` statements.
+ * regular prototype `call` statements.
  * @param {string} js
  * @param {string} keyword
  */
-exports.pseudokeyword = function(js, keyword) {
-	return run(js, (keyword || 'this._super') + '.', js.length - 1);
+exports.pseudokeyword = function(js, keywords) {
+	keywords = keywords === true ? 'super' : keywords; 
+	keywords = keywords.charAt ? [keywords] : keywords;
+	keywords = keywords.map(function(keyword) {
+		return keyword + '.';
+	});
+	return run(js, keywords, js.length - 1);
 };
 
 
@@ -14,11 +19,10 @@ exports.pseudokeyword = function(js, keyword) {
 /**
  * Run the computer on all characters in input.
  * @param {string} input
- * @param {string} output
- * @param {string} keyword
+ * @param {Array<string>} keywords
  * @param {number} endindex
  */
-function run(input, keyword, endindex) {
+function run(input, keywords, endindex) {
 
 	var METHODNAME = /\w|\$/;
 	var CLASSNAME = /\w|\$|\./;
@@ -28,7 +32,9 @@ function run(input, keyword, endindex) {
 		prototype = null,
 		charindex = 0,
 		curlcount = 0,
+		prencount = 0,
 		stringmode = false,
+		commentmode = false,
 		supercall = false,
 		methodname = false,
 		superargs = false,
@@ -57,7 +63,8 @@ function run(input, keyword, endindex) {
 		if(findbehind(subword) && endshere(subword)) {
 			wordindex = startindex(subword);
 			prototype = getprototypeat(wordindex);
-			curlcount = -1;
+			curlcount = 0;
+			prencount = 0;
 			checknext = false;
 		}
 		return checknext;
@@ -67,12 +74,16 @@ function run(input, keyword, endindex) {
 	 * Did the code just intend a supercall?
 	 */
 	function checksupercall() {
-		if (findbehind(keyword)) {
-			supercall = true;
-			methodname = true;
-			buffer = buffer.substr(0, startindex(keyword));
-			buffer += prototype;
-		}
+		keywords.every(function(keyword) {
+			if (findbehind(keyword)) {
+				supercall = true;
+				methodname = true;
+				buffer = buffer.substr(0, startindex(keyword));
+				buffer += prototype;
+				return false;
+			}
+			return true;
+		});
 	}
 
 	/**
@@ -172,30 +183,30 @@ function run(input, keyword, endindex) {
 
 	/**
 	 * Process chars in one way.
+	 * TODO: This ain't right :/
 	 */
 	function somechars() {
-		if(!stringmode) {
-			switch (character) {
-				case '{':
-					curlcount --;
-					break;
-				case '}':
-					curlcount --;
-					if(curlcount === 0) {
-						prototype = null;
-					}
-					break;
-			}
-		}
-		if(!stringmode) {
+		var was = false;
+		if(!stringmode && !commentmode) {
 			if(prototype) {
 				switch (character) {
+					case '(':
+						prencount ++;
+						break;
+					case ')':
+						was = prencount > 0;
+						prencount --;
+						if(was && prencount === 0) {
+							prototype = null;
+						}
+						break;
 					case '{':
-						curlcount --;
+						curlcount ++;
 						break;
 					case '}':
+						was = curlcount > 0;
 						curlcount --;
-						if(curlcount === 0) {
+						if(was && curlcount === 0) {
 							prototype = null;
 						}
 						break;

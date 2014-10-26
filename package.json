@@ -1,29 +1,29 @@
 {
-  "name": "grunt-spiritual-build",
-  "version": "0.1.13",
-  "dependencies": {
-    "uglify-js": "^2.4.15",
-    "jshint": "^2.1.11",
-    "chalk": "^0.5.1",
-    "6to5": "^1.9.10"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/wunderbyte/grunt-spiritual-build.git"
-  },
-  "bugs": {
-    "url": "https://github.com/wunderbyte/grunt-spiritual-build/issues"
-  },
-  "homepage": "https://github.com/wunderbyte/grunt-spiritual-build",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "Wired Earp <wiredearp@gmail.com>",
-  "license": "MIT",
-  "devDependencies": {
-    "esprima": "^1.2.2",
-    "grunt": "^0.4.5",
-    "grunt-contrib-copy": "^0.7.0",
-    "load-grunt-tasks": "^0.6.0"
-  }
+	"name": "grunt-spiritual-build",
+	"version": "0.1.16",
+	"dependencies": {
+		"6to5": "^1.9.10",
+		"chalk": "^0.5.1",
+		"esprima": "^1.2.2",
+		"jshint": "^2.1.11",
+		"uglify-js": "^2.4.15"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/wunderbyte/grunt-spiritual-build.git"
+	},
+	"bugs": {
+		"url": "https://github.com/wunderbyte/grunt-spiritual-build/issues"
+	},
+	"homepage": "https://github.com/wunderbyte/grunt-spiritual-build",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"author": "Wired Earp <wiredearp@gmail.com>",
+	"license": "MIT",
+	"devDependencies": {
+		"grunt": "^0.4.5",
+		"grunt-contrib-copy": "^0.7.0",
+		"load-grunt-tasks": "^0.6.0"
+	}
 }

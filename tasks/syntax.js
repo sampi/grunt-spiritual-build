@@ -3,11 +3,10 @@ var esprima = require('esprima');
 
 /**
  * Basic syntax valid?
- * @param {Grunt} grunt
- * @param {Array<string>} longlist List of file paths
+ * @param {string} js
  */
-exports.valid = function(grunt, longlist) {
-	return validate(grunt, longlist);
+exports.valid = function(grunt, js, filepath) {
+	return isvalid(grunt, js, filepath);
 };
 
 
@@ -17,7 +16,7 @@ exports.valid = function(grunt, longlist) {
  * @param {Grunt} grunt
  * @param {Array<string>} files
  * @returns {boolean}
- */
+ *
 function validate(grunt, longlist) {
 	var filemap = mapcontents(grunt, longlist);
 	return allvalid(grunt, filemap);
@@ -27,7 +26,7 @@ function validate(grunt, longlist) {
  * @param {Grunt} grunt
  * @param {Array<string>} files
  * @returns {boolean}
- */
+ *
 function allvalid(grunt, files) {
 	return Object.keys(files).every(function(filepath) {
 		var js = files[filepath];
@@ -41,7 +40,7 @@ function allvalid(grunt, files) {
  * @param {string} filepath
  * @returns {boolean}
  */
-function isvalid(grunt, js, filepath) {
+function isvalid(grunt, filepath, js) {
 	var config;
 	var syntax;
 	try {
@@ -66,7 +65,7 @@ function isvalid(grunt, js, filepath) {
  * Map file path to file content.
  * @param {Grunt} grunt
  * @param {Array<string>} longlist
- */
+ *
 function mapcontents(grunt, longlist) {
 	var sources = longlist.map(function(filepath) {
 		return grunt.file.read(filepath);
@@ -77,6 +76,7 @@ function mapcontents(grunt, longlist) {
 	});
 	return map;
 }
+/
 
 
 /* JSHINT STUFF.................................................................

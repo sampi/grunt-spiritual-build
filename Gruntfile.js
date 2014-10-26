@@ -44,41 +44,18 @@ module.exports = function ( grunt ) {
 			}
 		},
 
-		spiritual : {
-			test : {
-				files : {
-					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json' ]
-				}
-			}
-			/*
-			gui : {
-				options : {
-					jshintrc : path.gui ( ".jshintrc" )
+		guibundles : {
+			testbundle : {
+				options: {
+					min: false,
+					transpile: ['.es'],
+					superword: ['this._super']
 				},
 				files : {
-					"js/libs/spiritual/spiritual-gui.js" : [
-						path.gui ( "build.json" ),
-						path.gui ( "modules/spirits.module/build.json" ),
-						path.mix ( "layout.module/build.json" ),
-						path.mix ( "flex.module/build.json" ),
-						path.mix ( "keys.module/build.json" )
-					]
-				}
-			},
-			edb : {
-				options : {
-					jshintrc : path.edb ( ".jshintrc" )
-				},
-				files : {
-					"js/libs/spiritual/spiritual-edb.js" : [
-						path.edb ( "edb.module/build.json" ),
-						path.edb ( "edbml.module/build.json" ),
-						path.edb ( "sync.module/build.json" ),
-						path.mix ( "states.module/build.json" )
-					]
+					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json' ],
+					"test/result.js" : [ 'test/src/test1.js', 'test/src/test2.js' ]
 				}
 			}
-			*/
 		},
 		
 	});
