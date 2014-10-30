@@ -1,8 +1,8 @@
 var path = require("path");
 var ugli = require("uglify-js");
 var chalk = require('chalk');
-var sixto5 = require('6to5');
 var suber = require('./super');
+var sixto5 = require('6to5');
 var syntax = require('./syntax');
 
 /**
@@ -15,19 +15,25 @@ module.exports = function(grunt) {
 
 	var SPACER = "\n\n\n";
 	var HEADER = '(function(window) {\n\n"use strict";';
-	var FOOTER = '}(self));'; // worker compatible context
+	var FOOTER = '}(self));'; // crappy module loader hides the window :/
+
+	/**
+	 * Defaults.
+	 */
+	var defaultoptions = {
+		classword: ['extend', 'mixin'],
+		superword: ['this.super'],
+		transpile: ['.es'],
+		min: true,
+		max: true,
+		map: false
+	};
 	
 	/*
 	 * Task to concat and minify files.
 	 */
 	grunt.registerMultiTask("guibundles", "Spiritual bundles", function() {
-		var sources, content, options = this.options({
-			superword: ['super'],
-			transpile: ['.es'],
-			min: true,
-			max: true,
-			map: false
-		});
+		var sources, content, options = this.options(defaultoptions);
 		this.files.forEach(function(pair) {
       sources = grunt.file.expand({nonull: true}, pair.orig.src);
       if(sources.every(exists)) {
@@ -88,12 +94,26 @@ module.exports = function(grunt) {
 	 */
 	function extras(src, js, options) {
 		if(options.superword) {
-			js = suber.pseudokeyword(js, options.superword);
+			js = suber.pseudokeyword(js, 
+				getwords(options.superword, defaultoptions.superword),
+				getwords(options.classword, defaultoptions.classword)
+			);
 		}
 		if(options.transpile) {
 			js = maybetranspile(src, js, options.transpile);
 		}
 		return js;
+	}
+
+	/**
+	 * @param {boolean|string|Array<string>} words
+	 * @param {Array<string>} defaults
+ 	 * @returns {Array<string>}
+	 */
+	function getwords(words, defaults) {
+		words = words === true ? defaults : words; 
+		words = words ? words : defaults;
+		return words.charAt ? [words] : words;
 	}
 
 	/**

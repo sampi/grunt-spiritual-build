@@ -3,10 +3,10 @@
  * regular prototype `call` statements.
  * @param {string} inout
  * @param @optional {boolean|string|Array<string>} superwords
- * @param @optional {boolean|string|Array<string>} extendwords
+ * @param @optional {boolean|string|Array<string>} classwords
  */
-exports.pseudokeyword = function(input, superwords, extendwords) {
-	var fixes = parse(input, superwords, extendwords);
+exports.pseudokeyword = function(input, superwords, classwords) {
+	var fixes = parse(input, superwords, classwords);
 	return output(input, fixes);
 };
 
@@ -17,17 +17,17 @@ exports.pseudokeyword = function(input, superwords, extendwords) {
  * Run the computer on characters in input.
  * @param {string} input
  * @param @optional {boolean|string|Array<string>} superwords
- * @param @optional {boolean|string|Array<string>} extendwords
+ * @param @optional {boolean|string|Array<string>} classwords
  * @returns {Array<Fix>}
  */
-function parse(input, superwords, extendwords) {
+function parse(input, superwords, classwords) {
 	var fixes = [];
 	var state = new State();
 	var paren = new Paren();
 	var curly = new Curly();
 	var param = new Param();
 	var suber = new Super();
-	var words = new Words(superwords, extendwords);
+	var words = new Words(superwords, classwords);
 	require('acorn').parse(input, {
 		ranges: true,
 		onToken: function(token) {
@@ -128,10 +128,10 @@ Curly.prototype = {
  * Tracking word(clusters) that subclasses something 
  * and other words that seem to call a super method.
  * @param @optional {boolean|string|Array<string>} superwords
- * @param @optional {boolean|string|Array<string>} extendwords
+ * @param @optional {boolean|string|Array<string>} classwords
  */
-function Words(superwords, extendwords) {
-	this.extendwords = getwords(extendwords, ['extend', 'mixin']);
+function Words(superwords, classwords) {
+	this.classwords = getwords(classwords, ['extend', 'mixin']);
 	this.superwords = getwords(superwords, ['this._super']).map(
 		function dot(word) {
 			return word + '.';
@@ -140,7 +140,7 @@ function Words(superwords, extendwords) {
 }
 Words.prototype = {
 	superwords: null,
-	extendwords: null
+	classwords: null
 };
 
 function getwords(words, defaults) {
@@ -243,7 +243,7 @@ function onnamedtoken(state, paren, curly, suber, param, words, start, value) {
 			});
 		}
 	} else {
-		words.extendwords.every(function checkextends(word) {
+		words.classwords.every(function checkextends(word) {
 			if (value === word) {
 				suber.protostring = state.parts.join('') + 'prototype';
 				curly.protocount = curly.count;

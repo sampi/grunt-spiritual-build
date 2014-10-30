@@ -9,7 +9,7 @@ gui.Fisse = (function() {
 	});
 	*/
 	
-	return gui.Spasser.extend({
+	return gui.Spasser.ogginok({
 
 		spastiker: function() {
 			this._super.spastiker(23, 5);
@@ -19,6 +19,12 @@ gui.Fisse = (function() {
 			var x = gui.Object.extend({ged:true}, {hest:false});
 			return this._super.fisting(23).map(function(x) {
 				return 'fisse' + x;
+			});
+		},
+
+		fistingmore: function() {
+			return this.fedespasser.fisting(23).map(function(x) {
+				return 'fisse' + this;
 			});
 		},
 
