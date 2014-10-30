@@ -1,8 +1,8 @@
 var path = require("path");
 var ugli = require("uglify-js");
 var chalk = require('chalk');
-var suber = require('./super');
 var sixto5 = require('6to5');
+var suber = require('./super');
 var syntax = require('./syntax');
 
 /**

@@ -1,258 +1,329 @@
 /**
- * Replace all psudosuperkeywords with 
+ * Replace all psudosuperkeywords with
  * regular prototype `call` statements.
- * @param {string} js
- * @param {string} keyword
+ * @param {string} inout
+ * @param @optional {boolean|string|Array<string>} superwords
+ * @param @optional {boolean|string|Array<string>} extendwords
  */
-exports.pseudokeyword = function(js, keywords) {
-	keywords = keywords === true ? 'super' : keywords; 
-	keywords = keywords.charAt ? [keywords] : keywords;
-	keywords = keywords.map(function(keyword) {
-		return keyword + '.';
-	});
-	return run(js, keywords, js.length - 1);
+exports.pseudokeyword = function(input, superwords, extendwords) {
+	var fixes = parse(input, superwords, extendwords);
+	return output(input, fixes);
 };
 
 
 // Private .....................................................................
 
 /**
- * Run the computer on all characters in input.
+ * Run the computer on characters in input.
  * @param {string} input
- * @param {Array<string>} keywords
- * @param {number} endindex
+ * @param @optional {boolean|string|Array<string>} superwords
+ * @param @optional {boolean|string|Array<string>} extendwords
+ * @returns {Array<Fix>}
  */
-function run(input, keywords, endindex) {
-
-	var METHODNAME = /\w|\$/;
-	var CLASSNAME = /\w|\$|\./;
-
-	var output = '',
-		character = '',
-		prototype = null,
-		charindex = 0,
-		curlcount = 0,
-		prencount = 0,
-		stringmode = false,
-		commentmode = false,
-		supercall = false,
-		methodname = false,
-		superargs = false,
-		buffer = '',
-		wordindex = -1,
-		subwords = [
-			'.extend', 
-			'.mixin'
-		];
-
-	/**
-	 * Check if we hit a `MyClass.extend` or `MyClass.mixin` pattern.
-	 */
-	function checkextensions() {
-		subwords.every(checkextension);
-	}
-
-	/**
-	 * Did the code just itend to extend or mixin something? 
-	 * If so, we switch to super keyword replacement modus.
-	 * @param {string} subword
-	 * @returns {boolean} True if no match (so check another match)
-	 */
-	function checkextension(subword) {
-		var checknext = true;
-		if(findbehind(subword) && endshere(subword)) {
-			wordindex = startindex(subword);
-			prototype = getprototypeat(wordindex);
-			curlcount = 0;
-			prencount = 0;
-			checknext = false;
+function parse(input, superwords, extendwords) {
+	var fixes = [];
+	var state = new State();
+	var paren = new Paren();
+	var curly = new Curly();
+	var param = new Param();
+	var suber = new Super();
+	var words = new Words(superwords, extendwords);
+	require('acorn').parse(input, {
+		ranges: true,
+		onToken: function(token) {
+			ontoken(state, paren, curly, suber, param, words, token, fixes);
 		}
-		return checknext;
-	}
+	});
+	return fixes;
+}
 
-	/**
-	 * Did the code just intend a supercall?
-	 */
-	function checksupercall() {
-		keywords.every(function(keyword) {
-			if (findbehind(keyword)) {
-				supercall = true;
-				methodname = true;
-				buffer = buffer.substr(0, startindex(keyword));
-				buffer += prototype;
+/**
+ * @param {State} state
+ * @param {string} input
+ * @param {Array<string>} fixes
+ */
+function output(input, fixes) {
+	var js, i1, i2, delta = 0;
+	return fixes.reduce(function(code, fix) {
+		js = fix.newcode;
+		i1 = fix.oldcode.start + delta;
+		i2 = fix.oldcode.end + delta;
+		delta += (js.length - (i2 - i1));
+		return code.substring(0, i1) + js + code.substring(i2);
+	}, input);
+}
+
+
+
+// Constructors ................................................................
+
+/**
+ * TODO: Figure out how empty strings got into the params list.
+ * @param {string} proto
+ * @param {string} method
+ * @param {Array<string>} params
+ * @oaram {number} start
+ * @param {number} end
+ */
+function Fix(proto, method, params, start, end) {
+	params = params.filter(function(param) {
+		return param.length;
+	});
+	params.unshift('this');
+	this.newcode = proto + '.' + method + '.call(' + params.join(', ') + ')';
+	this.oldcode = {
+		start: start,
+		end: end
+	};
+}
+
+/**
+ * General purpose mutable state.
+ */
+function State() {}
+State.prototype = {
+	parts: [],
+	start: -1
+};
+
+/**
+ * Tracking superclass and method to call.
+ */
+function Super() {}
+Super.prototype = {
+	protostring: null,
+	maybemethod: null,
+	protomethod: null
+};
+
+/**
+ * Tracking supercall parameters.
+ */
+function Param() {}
+Param.prototype = {
+	done: null,
+	next: null
+};
+
+/**
+ * Tracking parenthesis.
+ */
+function Paren() {}
+Paren.prototype = {
+	count: 0,
+	paramcount: 0,
+	protocount: 0
+};
+
+/**
+ * Tracking curly brackets.
+ */
+function Curly() {}
+Curly.prototype = {
+	count: 0,
+	protocount: 0
+};
+
+/**
+ * Tracking word(clusters) that subclasses something 
+ * and other words that seem to call a super method.
+ * @param @optional {boolean|string|Array<string>} superwords
+ * @param @optional {boolean|string|Array<string>} extendwords
+ */
+function Words(superwords, extendwords) {
+	this.extendwords = getwords(extendwords, ['extend', 'mixin']);
+	this.superwords = getwords(superwords, ['this._super']).map(
+		function dot(word) {
+			return word + '.';
+		}
+	);
+}
+Words.prototype = {
+	superwords: null,
+	extendwords: null
+};
+
+function getwords(words, defaults) {
+	words = words === true ? defaults : words; 
+	words = words ? words : defaults;
+	return words.charAt ? [words] : words;
+}
+
+
+// Parse tokens ................................................................
+
+/**
+ * @param {State} state
+ * @param {Paren} paren
+ * @param {Curly} curly
+ * @param {Suber} suber
+ * @param {Param} param
+ * @param {Words} words
+ * @param {object} token
+ * @param {Array<Fix>} fixes
+ */
+function ontoken(state, paren, curly, suber, param, words, token, fixes) {
+	var type = token.type.type;
+	var word = token.type.keyword;
+	var cuts = token.type.beforeExpr;
+	var value = token.value;
+	if (param.done) {
+		onparamtoken(state, paren, param, value, word, type);
+	}
+	switch (type) {
+		case 'name':
+			onnamedtoken(state, paren, curly, suber, param, words, token.start, value);
+			break;
+		case '.':
+			state.parts.push(type);
+			break;
+		case '(':
+			onparenopen(state, paren, suber, param);
+			break;
+		case ')':
+			onparenclose(state, paren, suber, param, token, fixes);
+			break;
+		case '{':
+			oncurlyopen(curly);
+			break;
+		case '}':
+			oncurlyclose(state, curly, suber);
+			break;
+		default:
+			state.parts = [];
+			break;
+	}
+	if (word) {
+		if (cuts) {
+			state.parts = [];
+		} else {
+			state.parts.push(word);
+		}
+	}
+}
+
+/**
+ * @param {State} state
+ * @param {Paren} paren
+ * @param {Param} param
+ * @param {string} value
+ * @param {string} word
+ * @param {string} type
+ */
+function onparamtoken(state, paren, param, value, word, type) {
+	if (type === ')' && paren.count === paren.paramcount + 1) {
+		// don't collect closing parenthesis of supercall args
+	} else if (type !== ',' || paren.count > paren.paramcount) {
+		param.next.push(value || word || type);
+	} else {
+		param.done.push(param.next.join(''));
+		param.next = [];
+	}
+}
+
+/**
+ * @param {State} state
+ * @param {Paren} paren
+ * @param {Curly} curly
+ * @param {Param} param
+ * @param {Suber} param
+ * @param {number} start
+ * @param {string} value
+ */
+function onnamedtoken(state, paren, curly, suber, param, words, start, value) {
+	if (suber.protostring) {
+		if (!suber.maybemethod && !param.done) {
+			words.superwords.every(function checksupercall(word) {
+				if (state.parts.join('') === word) {
+					state.start = start - word.length;
+					suber.maybemethod = value;
+					return false;
+				}
+				return true;
+			});
+		}
+	} else {
+		words.extendwords.every(function checkextends(word) {
+			if (value === word) {
+				suber.protostring = state.parts.join('') + 'prototype';
+				curly.protocount = curly.count;
+				paren.protocount = paren.count;
 				return false;
 			}
 			return true;
 		});
 	}
+	state.parts.push(value);
+}
 
-	/**
-	 * TODO: zero-index singularity?
-	 * @param {number} index
-	 * @returns {string} 
-	 */
-	function getprototypeat(index) {
-		var prev = buffer.substr(0, index);
-		var indx = prev.length;
-		while(--indx && prev[indx].match(CLASSNAME)) {}
-		return prev.substring(indx + 1) + '.prototype.';
+/**
+ * @param {State} state
+ * @param {Paren} paren
+ * @param {Super} suber
+ * @param {Param} param
+ */
+function onparenopen(state, paren, suber, param) {
+	if (suber.maybemethod) {
+		paren.paramcount = paren.count;
+		suber.protomethod = suber.maybemethod;
+		param.done = [];
+		param.next = [];
+		suber.maybemethod = null;
 	}
+	paren.count++;
+}
 
-	/**
-	 * @param {string} string
-	 * @returns {booleans}
-	 */
-	function findbehind(string) {
-		var nowlength, hindsight;
-		if (bufferlength() >= string.length) {
-			nowlength = startindex(string);
-			hindsight = buffer.substr(nowlength, string.length);
-			if (hindsight === string) {
-				return true;
+/**
+ * @param {State} state
+ * @param {Paren} paren
+ * @param {Super} suber
+ * @param {Param} param
+ * @param {object} token
+ * @param {Array<string>} fixes
+ */
+function onparenclose(state, paren, suber, param, token, fixes) {
+	paren.count--;
+	if (suber.protostring) {
+		if (param.done) {
+			if (paren.count === paren.paramcount) {
+				param.done.push(param.next.join(''));
+				fixes.push(
+					new Fix(
+						suber.protostring,
+						suber.protomethod,
+						param.done,
+						state.start,
+						token.end
+					)
+				);
+				state.start = -1;
+				param.done = null;
+				param.next = null;
 			}
 		}
-		return false;
-	}
-
-	/**
-	 * Magic word is not a substring of a longer word?
-	 * @param {string} subword
-	 * @returns {booleans}
-	 */
-	function endshere(subword) {
-		var nextindex = charindex + 1;
-		return input.length === nextindex ||
-			!input[nextindex].match(METHODNAME);
-	}
-
-	/**
-	 * Sugar.
-	 * @returns {number}
-	 */
-	function bufferlength() {
-		return buffer.length;
-	}
-
-	/**
-	 * Compute index of string in buffer.
-	 * @param {string} string
-	 * @return {number}
-	 */
-	function startindex(string) {
-		return bufferlength() - string.length;
-	}
-
-	/**
-	 * TODO: all sorts of edge cases
-	 */
-	function processsupercall() {
-		if (methodname) {
-			if (!character.match(METHODNAME)) {
-				buffer += '.call';
-				methodname = false;
-			}
-		} else if (superargs) {
-			if (character.match(METHODNAME)) {
-				buffer += ', ';
-				superargs = false;
-			}
-		}
-		switch (character) {
-			case '(':
-				character = '(this';
-				superargs = true;
-				break;
-			case ')':
-				supercall = false;
-				superargs = false;
-				break;
+		if (paren.count === paren.protocount) {
+			suber.protostring = null;
 		}
 	}
+}
 
-	/**
-	 * Flush buffer to output.
-	 */
-	function flush() {
-		output += buffer;
-		output += character;
-		buffer = '';
-		supercall = false;
-		methodname = false;
-		superargs = false;
+/**
+ * Curly brace begins.
+ * @param {Curly} curly
+ */
+function oncurlyopen(curly) {
+	curly.count++;
+}
+
+/**
+ * Curly brace ends.
+ * @param {State} state
+ * @param {Curly} curly
+ * @param {Super} suber
+ */
+function oncurlyclose(state, curly, suber) {
+	curly.count--;
+	if (suber.protostring && curly.count === curly.protocount) {
+		suber.protostring = null;
 	}
-
-	/**
-	 * Process chars in one way.
-	 * TODO: This ain't right :/
-	 */
-	function somechars() {
-		var was = false;
-		if(!stringmode && !commentmode) {
-			if(prototype) {
-				switch (character) {
-					case '(':
-						prencount ++;
-						break;
-					case ')':
-						was = prencount > 0;
-						prencount --;
-						if(was && prencount === 0) {
-							prototype = null;
-						}
-						break;
-					case '{':
-						curlcount ++;
-						break;
-					case '}':
-						was = curlcount > 0;
-						curlcount --;
-						if(was && curlcount === 0) {
-							prototype = null;
-						}
-						break;
-				}
-			}
-		}
-	}
-
-	/**
-	 * Process chars in another way.
-	 */
-	function morechars() {
-		switch (character) {
-			case ';':
-				flush();
-				break;
-			case '=':
-			case '\'':
-			case '"':
-				if(!supercall) {
-					flush();
-				}
-				break;
-			default:
-				if (supercall) {
-					processsupercall();
-				}
-				buffer += character;
-				if (prototype && !supercall) {
-					checksupercall();
-				}
-				if(!prototype) {
-					checkextensions();
-				}
-				break;
-		}
-	}
-
-	// iterate all characters
-	while (charindex <= endindex) {
-		character = input[charindex];
-		somechars();
-		morechars();
-		charindex++;
-	}
-
-	// flush all to output
-	return output + buffer;
 }

@@ -15,15 +15,6 @@ module.exports = function ( grunt ) {
 		console.log('First build :)');
 	}
 
-	/**
-	 * Shorthand Spiritual projects on the file system.
-	 */
-	var path = {
-		gui : function ( path ) { return "../spiritual-gui/src/" + path; },
-		edb : function ( path ) { return "../spiritual-edb/src/" + path; },
-		mix : function ( path ) { return "../spiritual-mix/src/" + path; }
-	};
-
 	grunt.initConfig ({
 		/*
 		 * Manually install a build of this project in the 
@@ -52,8 +43,8 @@ module.exports = function ( grunt ) {
 					superword: ['this._super']
 				},
 				files : {
-					"test/testing.js" : [ '../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json' ],
-					"test/result.js" : [ 'test/src/test1.js', 'test/src/test2.js' ]
+					"test/testing.js" : ['../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json'],
+					//"test/result.js" : [ 'test/src/spirit.js' ]
 				}
 			}
 		},
