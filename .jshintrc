@@ -4,6 +4,7 @@
 		"module" : true,
 		"require" : true,
 		"console" : true,
+		"exports" : true,
 		"__dirname" : true
 	},
 	"globalstrict": false,
