@@ -43,8 +43,7 @@ module.exports = function ( grunt ) {
 					superword: ['this._super']
 				},
 				files : {
-					"test/testing.js" : ['../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json'],
-					//"test/result.js" : [ 'test/src/spirit.js' ]
+					//"test/testing.js" : ['../spiritual-gui/src/gui-spirits@wunderbyte.com/build.json']	
 				}
 			}
 		},
