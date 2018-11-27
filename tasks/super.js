@@ -10,7 +10,6 @@ exports.pseudokeyword = function(input, superwords, classwords) {
 	return output(input, fixes);
 };
 
-
 // Private .....................................................................
 
 /**
@@ -43,17 +42,18 @@ function parse(input, superwords, classwords) {
  * @param {Array<string>} fixes
  */
 function output(input, fixes) {
-	var js, i1, i2, delta = 0;
+	var js,
+		i1,
+		i2,
+		delta = 0;
 	return fixes.reduce(function(code, fix) {
 		js = fix.newcode;
 		i1 = fix.oldcode.start + delta;
 		i2 = fix.oldcode.end + delta;
-		delta += (js.length - (i2 - i1));
+		delta += js.length - (i2 - i1);
 		return code.substring(0, i1) + js + code.substring(i2);
 	}, input);
 }
-
-
 
 // Constructors ................................................................
 
@@ -125,18 +125,18 @@ Curly.prototype = {
 };
 
 /**
- * Tracking word(clusters) that subclasses something 
+ * Tracking word(clusters) that subclasses something
  * and other words that seem to call a super method.
  * @param @optional {boolean|string|Array<string>} superwords
  * @param @optional {boolean|string|Array<string>} classwords
  */
 function Words(superwords, classwords) {
 	this.classwords = getwords(classwords, ['extend', 'mixin']);
-	this.superwords = getwords(superwords, ['this._super']).map(
-		function dot(word) {
-			return word + '.';
-		}
-	);
+	this.superwords = getwords(superwords, ['this._super']).map(function dot(
+		word
+	) {
+		return word + '.';
+	});
 }
 Words.prototype = {
 	superwords: null,
@@ -144,11 +144,10 @@ Words.prototype = {
 };
 
 function getwords(words, defaults) {
-	words = words === true ? defaults : words; 
+	words = words === true ? defaults : words;
 	words = words ? words : defaults;
 	return words.charAt ? [words] : words;
 }
-
 
 // Parse tokens ................................................................
 
@@ -172,7 +171,16 @@ function ontoken(state, paren, curly, suber, param, words, token, fixes) {
 	}
 	switch (type) {
 		case 'name':
-			onnamedtoken(state, paren, curly, suber, param, words, token.start, value);
+			onnamedtoken(
+				state,
+				paren,
+				curly,
+				suber,
+				param,
+				words,
+				token.start,
+				value
+			);
 			break;
 		case '.':
 			state.parts.push(type);

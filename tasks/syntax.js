@@ -9,7 +9,6 @@ exports.valid = function(grunt, js, filepath) {
 	return isvalid(grunt, js, filepath);
 };
 
-
 // Private .....................................................................
 
 /**
@@ -44,7 +43,7 @@ function isvalid(grunt, filepath, js) {
 	var config;
 	var syntax;
 	try {
-		config = {tolerant: true};
+		config = { tolerant: true };
 		syntax = esprima.parse(js, config);
 		if (syntax.errors.length) {
 			syntax.errors.forEach(function(error) {

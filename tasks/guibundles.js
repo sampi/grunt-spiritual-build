@@ -1,5 +1,5 @@
-var path = require("path");
-var ugli = require("uglify-js");
+var path = require('path');
+var ugli = require('uglify-js');
 var chalk = require('chalk');
 var suber = require('./super');
 var sixto5 = require('6to5');
@@ -10,10 +10,9 @@ var syntax = require('./syntax');
  * @param {Grunt} grunt
  */
 module.exports = function(grunt) {
+	'use strict';
 
-	"use strict";
-
-	var SPACER = "\n\n\n";
+	var SPACER = '\n\n\n';
 	var HEADER = '(function(window) {\n\n"use strict";';
 	var FOOTER = '}(self));'; // crappy module loader hides the window :/
 
@@ -28,28 +27,30 @@ module.exports = function(grunt) {
 		max: true,
 		map: false
 	};
-	
+
 	/*
 	 * Task to concat and minify files.
 	 */
-	grunt.registerMultiTask("guibundles", "Spiritual bundles", function() {
-		var sources, content, options = this.options(defaultoptions);
+	grunt.registerMultiTask('guibundles', 'Spiritual bundles', function() {
+		var sources,
+			content,
+			options = this.options(defaultoptions);
 		this.files.forEach(function(pair) {
-      sources = grunt.file.expand({nonull: true}, pair.orig.src);
-      if(sources.every(exists)) {
-      	content = process(sources, options);
-      	if(options.max) {
-	      	writefile(pair.dest, content, options);
-	      } else if(options.map) {
-	      	grunt.log.error('Sourcemap expects a maxified file');
-	      }
-	      if(options.min) {
+			sources = grunt.file.expand({ nonull: true }, pair.orig.src);
+			if (sources.every(exists)) {
+				content = process(sources, options);
+				if (options.max) {
+					writefile(pair.dest, content, options);
+				} else if (options.map) {
+					grunt.log.error('Sourcemap expects a maxified file');
+				}
+				if (options.min) {
 					uglyfile(pair.dest, content, options);
-				} else if(options.map) {
+				} else if (options.map) {
 					grunt.log.error('Sourcemap expects a minfied file');
 				}
-      }
-    });
+			}
+		});
 	});
 
 	/**
@@ -60,32 +61,35 @@ module.exports = function(grunt) {
 	 */
 	function process(sources, options) {
 		sources = explodeall(sources);
-		if(!grunt.fail.errorcount) {
+		if (!grunt.fail.errorcount) {
 			var content = extract(sources, options);
 			return enclose(content.join(SPACER));
 		}
 	}
 
 	/**
-	 * Extract content from files and 
+	 * Extract content from files and
 	 * parse through various options.
 	 * @param {Array<string>} sources
 	 * @param {object} options
 	 * @returns {Array<string>}
 	 */
 	function extract(sources, options) {
-		return sources.map(function(src) {
-			return [src, grunt.file.read(src)];
-		}).filter(function(list) {
-			return syntax.valid(grunt, list[0], list[1]);
-		}).map(function(list) {
-			return extras(list[0], list[1], options);
-		});
+		return sources
+			.map(function(src) {
+				return [src, grunt.file.read(src)];
+			})
+			.filter(function(list) {
+				return syntax.valid(grunt, list[0], list[1]);
+			})
+			.map(function(list) {
+				return extras(list[0], list[1], options);
+			});
 	}
 
 	/**
 	 * Apply source code extras:
- 	 * 
+	 *
 	 * 1. Replace pseudosuperkeyword with `proto.call(this)`
 	 * 2. Transpile from ES6 to ES5 if file name matches
 	 * @param {string} src
@@ -93,13 +97,14 @@ module.exports = function(grunt) {
 	 * @param {object} options
 	 */
 	function extras(src, js, options) {
-		if(options.superword) {
-			js = suber.pseudokeyword(js, 
+		if (options.superword) {
+			js = suber.pseudokeyword(
+				js,
 				getwords(options.superword, defaultoptions.superword),
 				getwords(options.classword, defaultoptions.classword)
 			);
 		}
-		if(options.transpile) {
+		if (options.transpile) {
 			js = maybetranspile(src, js, options.transpile);
 		}
 		return js;
@@ -108,23 +113,23 @@ module.exports = function(grunt) {
 	/**
 	 * @param {boolean|string|Array<string>} words
 	 * @param {Array<string>} defaults
- 	 * @returns {Array<string>}
+	 * @returns {Array<string>}
 	 */
 	function getwords(words, defaults) {
-		words = words === true ? defaults : words; 
+		words = words === true ? defaults : words;
 		words = words ? words : defaults;
 		return words.charAt ? [words] : words;
 	}
 
 	/**
-	 * Transpile from ES6 to ES5 if filename matches something 
+	 * Transpile from ES6 to ES5 if filename matches something
 	 * specified. Default transpiling everything with '.es'.
 	 * @param {string|Array<string>} js
 	 * @returns {string}
 	 */
 	function maybetranspile(src, js, transpile) {
 		transpile = transpile.charAt ? [transpile] : transpile;
-		if(transpile.indexOf(path.extname(src)) >-1) {
+		if (transpile.indexOf(path.extname(src)) > -1) {
 			js = sixto5.transform(js).code;
 			js = js.replace(/"use strict";\n/, '');
 		}
@@ -148,7 +153,9 @@ module.exports = function(grunt) {
 	function exists(filepath) {
 		var does = grunt.file.exists(filepath);
 		if (!does) {
-			grunt.log.error('Human error: ' + chalk.cyan(filepath) + ' not found.');
+			grunt.log.error(
+				'Human error: ' + chalk.cyan(filepath) + ' not found.'
+			);
 			grunt.fail.errorcount++;
 		}
 		return does;
@@ -170,12 +177,15 @@ module.exports = function(grunt) {
 			var json = grunt.file.readJSON(packag);
 			version = json.version;
 		}
-		grunt.file.write(filepath, grunt.template.process(filetext, {
-			data: {
-				version: version
-			}
-		}));
-		grunt.log.writeln("File \"" + chalk.cyan(filepath) + "\" created.");
+		grunt.file.write(
+			filepath,
+			grunt.template.process(filetext, {
+				data: {
+					version: version
+				}
+			})
+		);
+		grunt.log.writeln('File "' + chalk.cyan(filepath) + '" created.');
 	}
 
 	/**
@@ -188,7 +198,7 @@ module.exports = function(grunt) {
 		var maptarget = prettyfile.replace('.js', '.js.map');
 		var uglycodes = uglify(options.max ? prettyfile : sourcecode);
 		writefile(mintarget, uglycodes.code, options);
-		if(options.map) {
+		if (options.map) {
 			writefile(maptarget, uglycodes.map, options);
 		}
 	}
@@ -199,7 +209,9 @@ module.exports = function(grunt) {
 	 * @param @optional {string} sourcecode
 	 */
 	function uglify(prettyfile, sourcecode) {
-		console.warn('Not quite getting the right path to source in the map :/');
+		console.warn(
+			'Not quite getting the right path to source in the map :/'
+		);
 		return ugli.minify(sourcecode || prettyfile, {
 			fromString: sourcecode !== undefined,
 			outSourceMap: path.basename(prettyfile) + '.map',
@@ -225,7 +237,7 @@ module.exports = function(grunt) {
 	 * @returns {Array<String>}
 	 */
 	function explodeall(sources) {
-		sources = grunt.file.expand({nonull: true}, sources);
+		sources = grunt.file.expand({ nonull: true }, sources);
 		return explode(sources.filter(exists).map(relpath));
 	}
 
@@ -235,7 +247,7 @@ module.exports = function(grunt) {
 	 * @returns {String}
 	 */
 	function relpath(filepath) {
-		return path.relative(path.dirname("."), filepath);
+		return path.relative(path.dirname('.'), filepath);
 	}
 
 	/**
@@ -245,16 +257,20 @@ module.exports = function(grunt) {
 	 * @returns {Array<String>}
 	 */
 	function explode(sources) {
-		var json, res = [];
+		var json,
+			res = [];
 		sources.forEach(function(source) {
 			switch (path.extname(source)) {
-				case ".json":
+				case '.json':
 					json = grunt.file.readJSON(source);
-					res.push.apply(res, json.map(function(filepath) {
-						return path.dirname(source) + "/" + filepath;
-					}));
+					res.push.apply(
+						res,
+						json.map(function(filepath) {
+							return path.dirname(source) + '/' + filepath;
+						})
+					);
 					break;
-				case ".js":
+				case '.js':
 					res.push(source);
 					break;
 			}
