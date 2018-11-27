@@ -2,7 +2,6 @@ var path = require('path');
 var ugli = require('uglify-js');
 var chalk = require('chalk');
 var suber = require('./super');
-var sixto5 = require('6to5');
 var syntax = require('./syntax');
 
 /**
@@ -22,7 +21,6 @@ module.exports = function(grunt) {
 	var defaultoptions = {
 		classword: ['extend', 'mixin'],
 		superword: ['this.super'],
-		transpile: ['.es'],
 		min: true,
 		max: true,
 		map: false
@@ -91,7 +89,6 @@ module.exports = function(grunt) {
 	 * Apply source code extras:
 	 *
 	 * 1. Replace pseudosuperkeyword with `proto.call(this)`
-	 * 2. Transpile from ES6 to ES5 if file name matches
 	 * @param {string} src
 	 * @param {string} js
 	 * @param {object} options
@@ -103,9 +100,6 @@ module.exports = function(grunt) {
 				getwords(options.superword, defaultoptions.superword),
 				getwords(options.classword, defaultoptions.classword)
 			);
-		}
-		if (options.transpile) {
-			js = maybetranspile(src, js, options.transpile);
 		}
 		return js;
 	}
@@ -119,21 +113,6 @@ module.exports = function(grunt) {
 		words = words === true ? defaults : words;
 		words = words ? words : defaults;
 		return words.charAt ? [words] : words;
-	}
-
-	/**
-	 * Transpile from ES6 to ES5 if filename matches something
-	 * specified. Default transpiling everything with '.es'.
-	 * @param {string|Array<string>} js
-	 * @returns {string}
-	 */
-	function maybetranspile(src, js, transpile) {
-		transpile = transpile.charAt ? [transpile] : transpile;
-		if (transpile.indexOf(path.extname(src)) > -1) {
-			js = sixto5.transform(js).code;
-			js = js.replace(/"use strict";\n/, '');
-		}
-		return js;
 	}
 
 	/**
